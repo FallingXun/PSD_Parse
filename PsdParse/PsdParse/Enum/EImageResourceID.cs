@@ -1,11 +1,10 @@
 namespace PsdParse
 {
-    public enum EImageResourceID
+    /// <summary>
+    /// 图像资源ID类型，详情见 <a href='https://www.adobe.com/devnet-apps/photoshop/fileformatashtml/#50577409_pgfId-1037450'>Adobe Photoshop File Formats Specification</a> 的  Image Resource IDs
+    /// </summary>
+    public enum EImageResourceID : short
     {
-        /// <summary>
-        /// 异常
-        /// </summary>
-        Unknowm = 0,
         /// <summary>
         /// 包含五个2字节值：通道数、行数、列数、深度和模式（已废弃，仅 Photoshop 2.0）
         /// </summary>

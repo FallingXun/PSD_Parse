@@ -18,9 +18,12 @@ namespace PsdParse
         }
 
         /// <summary>
-        /// 图像资源块数据
+        /// 图像资源块
         /// </summary>
-        public ImageResourceBlock m_ImageResourceBlock;
+        public ImageResourceBlock ImageResourceBlock
+        {
+            get; set;
+        }
 
 
         public void Parse(BinaryReader reader, Encoding encoding)
@@ -28,8 +31,8 @@ namespace PsdParse
             Length = reader.ReadInt32();
             if (Length > 0)
             {
-                m_ImageResourceBlock = new ImageResourceBlock();
-                m_ImageResourceBlock.Parse(reader, encoding);
+                ImageResourceBlock = new ImageResourceBlock();
+                ImageResourceBlock.Parse(reader, encoding);
             }
         }
     }
@@ -64,7 +67,7 @@ namespace PsdParse
         /// <summary>
         /// 图像资源ID（2 字节）
         /// </summary>
-        public EImageResourceID ImageResourceIID
+        public EImageResourceID ImageResourceID
         {
             get
             {
@@ -72,51 +75,44 @@ namespace PsdParse
             }
             set
             {
-                if(value == EImageResourceID.Unknowm)
+                if (Enum.IsDefined(typeof(EImageResourceID), value) == false)
                 {
-                    throw new Exception(string.Format("PSD 文件（图像资源段-图像资源块）异常，ImageResourceI:{0}", value));
+                    throw new Exception(string.Format("PSD 文件（图像资源段-图像资源块）异常，ImageResource:{0}", value));
                 }
                 m_ImageResourceID = value;
             }
         }
 
-        private string m_Name;
         /// <summary>
         /// 名字，Pascal 字符串（空名称由两个字节的0组成）
         /// </summary>
         public string Name
         {
-            get
-            {
-                return m_Name;
-            }
-            set
-            {
-                m_Name = value;
-            }
+            get; set;
         }
 
-        private uint m_ResourceDataSize;
         /// <summary>
         /// 资源数据大小（4 字节），需要内存对齐
         /// </summary>
         public uint ResourceDataSize
         {
-            get
-            {
-                return m_ResourceDataSize;
-            }
-            set
-            {
-                m_ResourceDataSize = value;
-            }
+            get; set;
+        }
+
+
+        /// <summary>
+        /// 资源数据
+        /// </summary>
+        public ResourceData ResourceData
+        {
+            get; set;
         }
 
 
         public void Parse(BinaryReader reader, Encoding encoding)
         {
             Signature = Encoding.ASCII.GetString(reader.ReadBytes(4));
-            ImageResourceIID = (EImageResourceID)reader.ReadInt16();
+            ImageResourceID = (EImageResourceID)reader.ReadInt16();
 
             // 内存对齐字节大小
             var multiple = 2;
@@ -142,6 +138,70 @@ namespace PsdParse
             {
                 var padding = multiple - mod;
                 endPosition += padding;
+            }
+            ResourceData = new ResourceData(ImageResourceID);
+            if (ResourceData != null)
+            {
+                ResourceData.ResourceFormat.Parse(reader, encoding);
+            }
+        }
+    }
+
+
+    /// <summary>
+    /// 图像资源段-图像资源块-资源数据
+    /// </summary>
+    public class ResourceData
+    {
+        private EImageResourceID m_ImageResourceID;
+        /// <summary>
+        /// 图像资源ID
+        /// </summary>
+        public EImageResourceID ImageResourceID
+        {
+            get
+            {
+                return m_ImageResourceID;
+            }
+            set
+            {
+                if (Enum.IsDefined(typeof(EImageResourceID), value)== false)
+                {
+                    throw new Exception(string.Format("PSD 文件（图像资源段-图像资源块-资源数据）异常，ImageResourceID:{0}", value));
+                }
+                m_ImageResourceID = value;
+            }
+        }
+
+        /// <summary>
+        /// 格式数据
+        /// </summary>
+        public IStreamParse ResourceFormat
+        {
+            get; set;
+        }
+
+        public ResourceData(EImageResourceID imageResourceID)
+        {
+            ImageResourceID = imageResourceID;
+            switch (imageResourceID)
+            {
+                case EImageResourceID.GridAndGuidesInfo_PS4:
+                    {
+                        ResourceFormat = new GridAndGuidesResourceFormat();
+                    }
+                    break;
+                case EImageResourceID.ThumbnailResource_PS4:
+                case EImageResourceID.ThumbnailResource_PS5:
+                    {
+                        ResourceFormat = new ThumbnailResourceFormat(imageResourceID);
+                    }
+                    break;
+                default:
+                    {
+                        // todo：参考其他 ResourceFormat 实现
+                    }
+                    break;
             }
         }
     }

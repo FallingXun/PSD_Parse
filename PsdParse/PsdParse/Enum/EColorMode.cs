@@ -2,12 +2,8 @@ namespace PsdParse
 {/// <summary>
  /// 文件的颜色模式
  /// </summary>
-    public enum EColorMode
+    public enum EColorMode : short
     {
-        /// <summary>
-        /// 异常
-        /// </summary>
-        Unknown = -1,
         /// <summary>
         /// 位图
         /// </summary>

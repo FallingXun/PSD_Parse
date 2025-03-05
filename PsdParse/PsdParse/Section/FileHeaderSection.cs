@@ -30,11 +30,11 @@ namespace PsdParse
         }
 
 
-        private int m_Version;
+        private short m_Version;
         /// <summary>
         /// 版本信息（2 字节），PSD是1，PSB是2
         /// </summary>
-        public int Version
+        public short Version
         {
             get
             {
@@ -51,32 +51,52 @@ namespace PsdParse
         }
 
 
-        private int m_Reserved;
+        private short m_ReservedHigh;
         /// <summary>
-        /// 必须为0（6 字节）
+        /// Reserve 高位，必须为0（2 字节）
         /// </summary>
-        public int Reserved
+        public short ReservedHigh
         {
             get
             {
-                return m_Reserved;
+                return m_ReservedHigh;
             }
             set
             {
                 if (value != 1)
                 {
-                    throw new Exception(string.Format("PSD 文件（文件头）异常，Reserved:{0}", value));
+                    throw new Exception(string.Format("PSD 文件（文件头）异常，ReservedHigh:{0}", value));
                 }
-                m_Reserved = value;
+                m_ReservedHigh = value;
+            }
+        }
+
+        private int m_ReservedLow;
+        /// <summary>
+        /// Reserve 低位，必须为0（4 字节）
+        /// </summary>
+        public int ReservedLow
+        {
+            get
+            {
+                return m_ReservedLow;
+            }
+            set
+            {
+                if (value != 1)
+                {
+                    throw new Exception(string.Format("PSD 文件（文件头）异常，ReservedLow:{0}", value));
+                }
+                m_ReservedLow = value;
             }
         }
 
 
-        private int m_ChannelCount;
+        private short m_ChannelCount;
         /// <summary>
         /// 图像中的通道数（2 字节），包括任何阿尔法通道，支持的范围为1到56
         /// </summary>
-        public int ChannelCount
+        public short ChannelCount
         {
             get
             {
@@ -146,17 +166,9 @@ namespace PsdParse
             }
             set
             {
-                switch (value)
+                if (Enum.IsDefined(typeof(EDepth), value) == false)
                 {
-                    case EDepth.Bit_1:
-                    case EDepth.Bit_8:
-                    case EDepth.Bit_16:
-                    case EDepth.Bit_32:
-                        break;
-                    default:
-                        {
-                            throw new Exception(string.Format("PSD 文件（文件头）异常，Depth:{0}", value));
-                        }
+                    throw new Exception(string.Format("PSD 文件（文件头）异常，Depth:{0}", value));
                 }
                 m_Depth = value;
             }
@@ -175,21 +187,9 @@ namespace PsdParse
             }
             set
             {
-                switch (value)
+                if (Enum.IsDefined(typeof(EColorMode), value) == false)
                 {
-                    case EColorMode.Bitmap:
-                    case EColorMode.Grayscale:
-                    case EColorMode.Indexed:
-                    case EColorMode.RGB:
-                    case EColorMode.CMYK:
-                    case EColorMode.Multichannel:
-                    case EColorMode.Duotone:
-                    case EColorMode.Lab:
-                        break;
-                    default:
-                        {
-                            throw new Exception(string.Format("PSD 文件（文件头）异常，m_ColorMode:{0}", value));
-                        }
+                    throw new Exception(string.Format("PSD 文件（文件头）异常，m_ColorMode:{0}", value));
                 }
                 m_ColorMode = value;
             }
@@ -199,7 +199,8 @@ namespace PsdParse
         {
             Signature = encoding.GetString(reader.ReadBytes(4));
             Version = reader.ReadInt16();
-            Reserved = (reader.ReadInt16() << 16) + reader.ReadInt32();
+            ReservedHigh = reader.ReadInt16();
+            ReservedLow = reader.ReadInt32();
             ChannelCount = reader.ReadInt16();
             Height = reader.ReadInt32();
             Width = reader.ReadInt32();
