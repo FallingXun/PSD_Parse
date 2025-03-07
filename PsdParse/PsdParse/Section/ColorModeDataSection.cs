@@ -30,9 +30,19 @@ namespace PsdParse
         public void Parse(BinaryReader reader, Encoding encoding)
         {
             Length = reader.ReadInt32();
+            var startPosition = reader.BaseStream.Position;
+            var endPosition = startPosition + Length;
             if (Length > 0)
             {
                 ColorData = reader.ReadBytes(Length);
+            }
+            if (reader.BaseStream.Position <= endPosition)
+            {
+                reader.BaseStream.Position = endPosition;
+            }
+            else
+            {
+                throw new Exception(string.Format("PSD 文件（颜色模式数据段）异常，数据超长:{0}，Length:{1}", reader.BaseStream.Position - startPosition, Length));
             }
         }
     }

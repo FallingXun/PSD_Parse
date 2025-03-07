@@ -84,7 +84,7 @@ namespace PsdParse
         }
 
         /// <summary>
-        /// 名字，Pascal 字符串（空名称由两个字节的0组成）
+        /// 名字，Pascal 字符串，长度为 2 的倍数（空名称由两个字节的0组成）
         /// </summary>
         public string Name
         {
@@ -115,34 +115,30 @@ namespace PsdParse
             ImageResourceID = (EImageResourceID)reader.ReadInt16();
 
             // 内存对齐字节大小
-            var multiple = 2;
+            var factor = 2u;
 
             // Pascal 字符串要以设定值的倍数存储，这里是 2 字节，读取完后还需要跳过偏移字节
             var startPosition = reader.BaseStream.Position;
             var count = (int)reader.ReadByte();
             var bytes = reader.ReadBytes(count);
-            var offset = (int)(reader.BaseStream.Position - startPosition);
-            var mod = offset % multiple;
-            if (mod > 0)
-            {
-                var padding = multiple - mod;
-                reader.BaseStream.Position += padding;
-            }
+            reader.BaseStream.Position += Utils.RoundUp((uint)(reader.BaseStream.Position - startPosition), factor);
             Name = encoding.GetString(bytes);
 
             ResourceDataSize = reader.ReadUInt32();
-
-            var endPosition = reader.BaseStream.Position + ResourceDataSize;
-            mod = (int)(ResourceDataSize % (uint)multiple);
-            if (mod > 0)
-            {
-                var padding = multiple - mod;
-                endPosition += padding;
-            }
+            startPosition = reader.BaseStream.Position;
+            var endPosition = startPosition + Utils.RoundUp(ResourceDataSize, factor);
             ResourceData = new ResourceData(ImageResourceID);
-            if (ResourceData != null)
+            if (ResourceData.ResourceFormat != null)
             {
                 ResourceData.ResourceFormat.Parse(reader, encoding);
+            }
+            if (reader.BaseStream.Position <= endPosition)
+            {
+                reader.BaseStream.Position = endPosition;
+            }
+            else
+            {
+                throw new Exception(string.Format("PSD 文件（图像资源段-图像资源块）异常，数据超长:{0}，ResourceDataSize:{1}", reader.BaseStream.Position - startPosition, ResourceDataSize));
             }
         }
     }
@@ -165,7 +161,7 @@ namespace PsdParse
             }
             set
             {
-                if (Enum.IsDefined(typeof(EImageResourceID), value)== false)
+                if (Enum.IsDefined(typeof(EImageResourceID), value) == false)
                 {
                     throw new Exception(string.Format("PSD 文件（图像资源段-图像资源块-资源数据）异常，ImageResourceID:{0}", value));
                 }
