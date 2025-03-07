@@ -28,7 +28,7 @@ namespace PsdParse
             m_LayerAndMaskInformation = new LayerAndMaskInformationSection();
             m_LayerAndMaskInformation.Parse(reader, encoding);
 
-            m_ImageData = new ImageDataSection();
+            m_ImageData = new ImageDataSection(m_FileHeader.ChannelCount, m_FileHeader.Width, m_FileHeader.Height, m_FileHeader.Depth, m_FileHeader.ColorMode);
             m_ImageData.Parse(reader, encoding);
         }
     }

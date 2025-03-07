@@ -90,7 +90,7 @@ namespace PsdParse
         /// </summary>
         EPSOptions = 1021,
         /// <summary>
-        /// 快速掩码信息，2个字节包含快速掩码通道ID，1字节布尔值，指示掩码最初是否为空
+        /// 快速蒙版信息，2个字节包含快速掩码通道ID，1字节布尔值，指示掩码最初是否为空
         /// </summary>
         QuickMaskInfo = 1022,
         /// <summary>
