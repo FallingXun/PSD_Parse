@@ -14,22 +14,22 @@ namespace PsdParse
 
         public PsdFile(Stream stream, Encoding encoding)
         {
-            var reader = new BinaryReader(stream);
+            var reader = new Reader(stream);
 
             m_FileHeader = new FileHeaderSection();
-            m_FileHeader.Parse(reader, encoding);
+            m_FileHeader.Parse(reader);
 
             m_ColorModeData = new ColorModeDataSection();
-            m_ColorModeData.Parse(reader, encoding);
+            m_ColorModeData.Parse(reader);
 
             m_ImageResources = new ImageResourcesSection();
-            m_ImageResources.Parse(reader, encoding);
+            m_ImageResources.Parse(reader);
 
             m_LayerAndMaskInformation = new LayerAndMaskInformationSection();
-            m_LayerAndMaskInformation.Parse(reader, encoding);
+            m_LayerAndMaskInformation.Parse(reader);
 
             m_ImageData = new ImageDataSection(m_FileHeader.ChannelCount, m_FileHeader.Width, m_FileHeader.Height, m_FileHeader.Depth, m_FileHeader.ColorMode);
-            m_ImageData.Parse(reader, encoding);
+            m_ImageData.Parse(reader);
         }
     }
 }

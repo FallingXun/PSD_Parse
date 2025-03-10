@@ -10,17 +10,17 @@ namespace PsdParse
 
         public Reader(Stream stream) : base(stream)
         {
-
+            m_Encoding = Encoding.Default;
         }
 
         public Reader(Stream stream, Encoding encoding) : base(stream, encoding)
         {
-
+            m_Encoding = encoding;
         }
 
         public Reader(Stream stream, Encoding encoding, bool leaveOpen) : base(stream, encoding, leaveOpen)
         {
-
+            m_Encoding = encoding;
         }
 
         #region BinaryReader 使用小端字节序，需要反转字节数据
