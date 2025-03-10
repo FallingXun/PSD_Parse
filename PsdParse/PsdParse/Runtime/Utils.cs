@@ -18,5 +18,6 @@ namespace PsdParse
         {
             return (value / factor + (value % factor > 0 ? 1u : 0)) * factor;
         }
+
     }
 }

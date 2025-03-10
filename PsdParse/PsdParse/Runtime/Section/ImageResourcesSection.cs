@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
@@ -20,7 +21,7 @@ namespace PsdParse
         /// <summary>
         /// 图像资源块
         /// </summary>
-        public ImageResourceBlock ImageResourceBlock
+        public List<ImageResourceBlock> ImageResourceBlockList
         {
             get; set;
         }
@@ -29,10 +30,33 @@ namespace PsdParse
         public void Parse(Reader reader)
         {
             Length = reader.ReadInt32();
+            var startPosition = reader.BaseStream.Position;
+            var endPosition = startPosition + Length;
             if (Length > 0)
             {
-                ImageResourceBlock = new ImageResourceBlock();
-                ImageResourceBlock.Parse(reader);
+                ImageResourceBlockList = new List<ImageResourceBlock>();
+                while (reader.BaseStream.Position < endPosition)
+                {
+                    var item = new ImageResourceBlock();
+                    item.Parse(reader);
+                    ImageResourceBlockList.Add(item);
+
+                    // 检查是否还有下一个 ImageResourceBlock
+                    var signature = reader.ReadASCIIString(4);
+                    reader.BaseStream.Position -= 4;
+                    if (signature != Const.Signature_8BIM)
+                    {
+                        break;
+                    }
+                }
+            }
+            if (reader.BaseStream.Position <= endPosition)
+            {
+                reader.BaseStream.Position = endPosition;
+            }
+            else
+            {
+                throw new Exception(string.Format("PSD 文件（图像资源段）异常，数据超长:{0}，Length:{1}", reader.BaseStream.Position - startPosition, Length));
             }
         }
     }
@@ -55,7 +79,7 @@ namespace PsdParse
             }
             set
             {
-                if (value != "8BIM")
+                if (value != Const.Signature_8BIM)
                 {
                     throw new Exception(string.Format("PSD 文件（图像资源段-图像资源块）异常，Signature:{0}", value));
                 }
@@ -77,7 +101,10 @@ namespace PsdParse
             {
                 if (Enum.IsDefined(typeof(EImageResourceID), value) == false)
                 {
-                    throw new Exception(string.Format("PSD 文件（图像资源段-图像资源块）异常，ImageResource:{0}", value));
+                    if ((value > EImageResourceID.PathInfoStart && value < EImageResourceID.PathInfoEnd) == false && (value > EImageResourceID.PluginResourceStart && value < EImageResourceID.PluginResourceEnd) == false)
+                    {
+                        throw new Exception(string.Format("PSD 文件（图像资源段-图像资源块）异常，ImageResource:{0}", value));
+                    }
                 }
                 m_ImageResourceID = value;
             }
@@ -123,7 +150,7 @@ namespace PsdParse
             ResourceDataSize = reader.ReadUInt32();
             var startPosition = reader.BaseStream.Position;
             var endPosition = startPosition + Utils.RoundUp(ResourceDataSize, factor);
-            ResourceData = new ResourceData(ImageResourceID);
+            ResourceData = new ResourceData(ImageResourceID, ResourceDataSize);
             if (ResourceData.ResourceFormat != null)
             {
                 ResourceData.ResourceFormat.Parse(reader);
@@ -145,25 +172,14 @@ namespace PsdParse
     /// </summary>
     public class ResourceData
     {
-        private EImageResourceID m_ImageResourceID;
         /// <summary>
         /// 图像资源ID
         /// </summary>
-        public EImageResourceID ImageResourceID
-        {
-            get
-            {
-                return m_ImageResourceID;
-            }
-            set
-            {
-                if (Enum.IsDefined(typeof(EImageResourceID), value) == false)
-                {
-                    throw new Exception(string.Format("PSD 文件（图像资源段-图像资源块-资源数据）异常，ImageResourceID:{0}", value));
-                }
-                m_ImageResourceID = value;
-            }
-        }
+        private EImageResourceID m_ImageResourceID;
+        /// <summary>
+        /// 资源数据大小
+        /// </summary>
+        private uint m_DataSize;
 
         /// <summary>
         /// 格式数据
@@ -173,9 +189,10 @@ namespace PsdParse
             get; set;
         }
 
-        public ResourceData(EImageResourceID imageResourceID)
+        public ResourceData(EImageResourceID imageResourceID, uint dataSize)
         {
-            ImageResourceID = imageResourceID;
+            m_ImageResourceID = imageResourceID;
+            m_DataSize = dataSize;
             switch (imageResourceID)
             {
                 case EImageResourceID.GridAndGuidesInfo_PS4:
@@ -192,6 +209,7 @@ namespace PsdParse
                 default:
                     {
                         // todo：参考其他 ResourceFormat 实现
+                        ResourceFormat = new DefaultResourceFormat(imageResourceID, dataSize);
                     }
                     break;
             }

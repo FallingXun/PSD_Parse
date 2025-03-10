@@ -109,7 +109,7 @@ namespace PsdParse
             var startPosition = BaseStream.Position;
             var count = (int)ReadByte();
             var bytes = ReadBytes(count);
-            BaseStream.Position += Utils.RoundUp((uint)(BaseStream.Position - startPosition), factor);
+            BaseStream.Position = startPosition + Utils.RoundUp((uint)(BaseStream.Position - startPosition), factor);
             var value = m_Encoding.GetString(bytes);
             return value;
         }

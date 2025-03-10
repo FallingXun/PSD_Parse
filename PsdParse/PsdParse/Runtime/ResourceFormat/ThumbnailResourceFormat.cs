@@ -24,7 +24,10 @@ namespace PsdParse
             {
                 if (Enum.IsDefined(typeof(EImageResourceID), value) == false)
                 {
-                    throw new Exception(string.Format("PSD 文件（图像资源段-图像资源块-资源数据-缩略图资源格式）异常，ImageResourceID:{0}", value));
+                    if ((value > EImageResourceID.PathInfoStart && value < EImageResourceID.PathInfoEnd) == false && (value > EImageResourceID.PluginResourceStart && value < EImageResourceID.PluginResourceEnd) == false)
+                    {
+                        throw new Exception(string.Format("PSD 文件（图像资源段-图像资源块-资源数据-缩略图资源格式）异常，ImageResourceID:{0}", value));
+                    }
                 }
                 m_ImageResourceID = value;
             }
@@ -129,7 +132,7 @@ namespace PsdParse
             CompressionSize = reader.ReadUInt32();
             BitsPerPixel = reader.ReadUInt16();
             PlanesCount = reader.ReadUInt16();
-            JFIFData = reader.ReadBytes((int)TotalSize);
+            JFIFData = reader.ReadBytes((int)CompressionSize);
         }
     }
 }

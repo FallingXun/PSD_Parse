@@ -63,7 +63,7 @@ namespace PsdParse
             }
             set
             {
-                if (value != 1)
+                if (value != 0)
                 {
                     throw new Exception(string.Format("PSD 文件（文件头）异常，ReservedHigh:{0}", value));
                 }
@@ -83,7 +83,7 @@ namespace PsdParse
             }
             set
             {
-                if (value != 1)
+                if (value != 0)
                 {
                     throw new Exception(string.Format("PSD 文件（文件头）异常，ReservedLow:{0}", value));
                 }

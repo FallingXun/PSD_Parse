@@ -47,16 +47,19 @@ namespace PsdParse
             Length = reader.ReadUInt32();
             var startPosition = reader.BaseStream.Position;
             var endPosition = startPosition + Length;
-            LayerInfo = new LayerInfo();
-            LayerInfo.Parse(reader);
-            GlobalLayerMaskInfo = new GlobalLayerMaskInfo();
-            GlobalLayerMaskInfo.Parse(reader);
-            AdditionalLayerInfoList = new List<AdditionalLayerInfo>();
-            while (reader.BaseStream.Position < endPosition)
+            if (Length > 0)
             {
-                var item = new AdditionalLayerInfo();
-                item.Parse(reader);
-                AdditionalLayerInfoList.Add(item);
+                LayerInfo = new LayerInfo();
+                LayerInfo.Parse(reader);
+                GlobalLayerMaskInfo = new GlobalLayerMaskInfo();
+                GlobalLayerMaskInfo.Parse(reader);
+                AdditionalLayerInfoList = new List<AdditionalLayerInfo>();
+                while (reader.BaseStream.Position < endPosition)
+                {
+                    var item = new AdditionalLayerInfo();
+                    item.Parse(reader);
+                    AdditionalLayerInfoList.Add(item);
+                }
             }
             if (reader.BaseStream.Position <= endPosition)
             {
@@ -114,26 +117,29 @@ namespace PsdParse
         public void Parse(Reader reader)
         {
             Length = Utils.RoundUp(reader.ReadUInt32(), 2u);
-            LayerCount = reader.ReadInt16();
-
-            LayerRecordsList = new List<LayerRecords>(LayerCount);
-            for (int i = 0; i < LayerCount; i++)
+            if (Length > 0)
             {
-                var item = new LayerRecords();
-                item.Parse(reader);
-                LayerRecordsList.Add(item);
-            }
+                LayerCount = reader.ReadInt16();
+
+                LayerRecordsList = new List<LayerRecords>(LayerCount);
+                for (int i = 0; i < LayerCount; i++)
+                {
+                    var item = new LayerRecords();
+                    item.Parse(reader);
+                    LayerRecordsList.Add(item);
+                }
 
 
-            ImageDataRecordsList = new List<ImageDataRecords>(LayerCount);
-            for (int i = 0; i < LayerCount; i++)
-            {
-                var width = LayerRecordsList[i].LayerContentsRectangle.Width;
-                var height = LayerRecordsList[i].LayerContentsRectangle.Height;
-                var channelInfoList = LayerRecordsList[i].ChannelInfoList;
-                var item = new ImageDataRecords(width, height, channelInfoList);
-                item.Parse(reader);
-                ImageDataRecordsList.Add(item);
+                ImageDataRecordsList = new List<ImageDataRecords>(LayerCount);
+                for (int i = 0; i < LayerCount; i++)
+                {
+                    var width = LayerRecordsList[i].LayerContentsRectangle.Width;
+                    var height = LayerRecordsList[i].LayerContentsRectangle.Height;
+                    var channelInfoList = LayerRecordsList[i].ChannelInfoList;
+                    var item = new ImageDataRecords(width, height, channelInfoList);
+                    item.Parse(reader);
+                    ImageDataRecordsList.Add(item);
+                }
             }
         }
     }
@@ -177,7 +183,7 @@ namespace PsdParse
             }
             set
             {
-                if (value != "8BIM")
+                if (value != Const.Signature_8BIM)
                 {
                     throw new Exception(string.Format("PSD 文件（图层和蒙版信息段-图层信息-图层记录）异常，BlendModeSignature:{0}", value));
                 }
@@ -296,13 +302,26 @@ namespace PsdParse
             Flags = reader.ReadByte();
             Filler = reader.ReadByte();
             ExtraDataFieldLength = reader.ReadUInt32();
-            LayerMask = new LayerMask();
-            LayerMask.Parse(reader);
-            LayerBlendingRanges = new LayerBlendingRanges();
-            LayerBlendingRanges.Parse(reader);
+            var startPosition = reader.BaseStream.Position;
+            var endPosition = startPosition + ExtraDataFieldLength;
+            if (ExtraDataFieldLength > 0)
+            {
+                LayerMask = new LayerMask();
+                LayerMask.Parse(reader);
+                LayerBlendingRanges = new LayerBlendingRanges();
+                LayerBlendingRanges.Parse(reader);
 
-            var factor = 4u;
-            LayerName = reader.ReadPascalString(factor);
+                var factor = 4u;
+                LayerName = reader.ReadPascalString(factor);
+            }
+            if(reader.BaseStream.Position <= endPosition)
+            {
+                reader.BaseStream.Position = endPosition;
+            }
+            else
+            {
+                throw new Exception(string.Format("PSD 文件（图层和蒙版信息段-图层信息-图层记录），数据超长:{0}，ExtraDataFieldLength:{1}", reader.BaseStream.Position - startPosition, ExtraDataFieldLength));
+            }
         }
     }
 
@@ -474,42 +493,51 @@ namespace PsdParse
         public void Parse(Reader reader)
         {
             Size = reader.ReadUInt32();
-            if (Size <= 0)
+            var startPosition = reader.BaseStream.Position;
+            var endPosition = startPosition + Size;
+            if (Size > 0)
             {
-                return;
+                EnclosingLayerMaskRectangle = new Rectangle(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
+                DefaultColor = (EDefaultColor)reader.ReadByte();
+                Flags = reader.ReadByte();
+                if ((Flags & (byte)ELayerMaskFlag.UserMaskCameFromRenderingOtherData) > 0)
+                {
+                    MaskParams = reader.ReadByte();
+                    if ((MaskParams & (byte)EMaskParamFlags.UserMaskDensity) > 0)
+                    {
+                        UserMaskDensity = reader.ReadByte();
+                    }
+                    if ((MaskParams & (byte)EMaskParamFlags.UserMaskFeather) > 0)
+                    {
+                        UserMaskFeather = reader.ReadDouble();
+                    }
+                    if ((MaskParams & (byte)EMaskParamFlags.VectorMaskDensity) > 0)
+                    {
+                        VectorMaskDensity = reader.ReadByte();
+                    }
+                    if ((MaskParams & (byte)EMaskParamFlags.VectorMaskFeather) > 0)
+                    {
+                        VectorMaskFeather = reader.ReadDouble();
+                    }
+                }
+                if (Size == 20)
+                {
+                    Padding = reader.ReadUInt16();
+                }
+                else
+                {
+                    RealFlags = reader.ReadByte();
+                    RealUserMaskBackground = (EDefaultColor)reader.ReadByte();
+                    RealEnclosingLayerMaskRectangle = new Rectangle(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
+                }
             }
-            EnclosingLayerMaskRectangle = new Rectangle(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
-            DefaultColor = (EDefaultColor)reader.ReadByte();
-            Flags = reader.ReadByte();
-            if ((Flags & (byte)ELayerMaskFlag.UserMaskCameFromRenderingOtherData) > 0)
+            if (reader.BaseStream.Position <= endPosition)
             {
-                MaskParams = reader.ReadByte();
-                if ((MaskParams & (byte)EMaskParamFlags.UserMaskDensity) > 0)
-                {
-                    UserMaskDensity = reader.ReadByte();
-                }
-                if ((MaskParams & (byte)EMaskParamFlags.UserMaskFeather) > 0)
-                {
-                    UserMaskFeather = reader.ReadDouble();
-                }
-                if ((MaskParams & (byte)EMaskParamFlags.VectorMaskDensity) > 0)
-                {
-                    VectorMaskDensity = reader.ReadByte();
-                }
-                if ((MaskParams & (byte)EMaskParamFlags.VectorMaskFeather) > 0)
-                {
-                    VectorMaskFeather = reader.ReadDouble();
-                }
-            }
-            if (Size == 20)
-            {
-                Padding = reader.ReadUInt16();
+                reader.BaseStream.Position = endPosition;
             }
             else
             {
-                RealFlags = reader.ReadByte();
-                RealUserMaskBackground = (EDefaultColor)reader.ReadByte();
-                RealEnclosingLayerMaskRectangle = new Rectangle(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
+                throw new Exception(string.Format("PSD 文件（图层和蒙版信息段-图层信息-图层记录-图层蒙版）异常，数据超长:{0}，Size:{1}", reader.BaseStream.Position - startPosition, Size));
             }
         }
 
@@ -585,33 +613,13 @@ namespace PsdParse
     /// </summary>
     public class ImageDataRecords : IStreamParse
     {
-        private ECompression m_Compression;
-        /// <summary>
-        /// 压缩格式（2 字节）
-        /// </summary>
-        [ByteSize(2)]
-        public ECompression Compression
-        {
-            get
-            {
-                return m_Compression;
-            }
-            set
-            {
-                if (Enum.IsDefined(typeof(ECompression), value) == false)
-                {
-                    throw new Exception(string.Format("PSD 文件（图层和蒙版信息段-图层信息-图像数据记录）异常，Compression:{0}", value));
-                }
-                m_Compression = value;
-            }
-        }
 
         /// <summary>
-        /// 所有通道的图像数据
+        /// 所有通道的图像数据列表
         ///     RLE压缩时，每个通道的字节数组，前面部分为每一行的数据长度，行数为 LayerBottom - LayerTop ，每个数据长度为 2 字节（PSB 为 4 字节），所有行的长度后才是图像数据
         /// </summary>
         [ByteSize()]
-        public IStreamParse ImageData
+        public List<IStreamParse> ChannelImageDataList
         {
             get; set;
         }
@@ -643,27 +651,37 @@ namespace PsdParse
 
         public void Parse(Reader reader)
         {
-            Compression = (ECompression)reader.ReadUInt16();
             var channelCount = m_ChannelInfoList.Count;
-            switch (Compression)
+            ChannelImageDataList = new List<IStreamParse>(channelCount);
+            for (int i = 0; i < channelCount; i++)
             {
-                case ECompression.RawData:
-                    {
-                        ImageData = new RawImageData(channelCount, m_Width, m_Height, m_ChannelInfoList);
-                    }
-                    break;
-                case ECompression.RLECompression:
-                    {
-                        ImageData = new RLEImageData(channelCount, m_Height);
-                    }
-                    break;
-                default:
-                    {
-                        ImageData = new RawImageData(channelCount, m_Width, m_Height, m_ChannelInfoList);
-                    }
-                    break;
+                var compression = (ECompression)reader.ReadUInt16();
+                // 此次只做预读取，方便确定格式，真实读取放到对应格式中统一管理
+                reader.BaseStream.Position -= 2;
+                IStreamParse item = null;
+                switch (compression)
+                {
+                    case ECompression.RawData:
+                        {
+                            var channelImageDataLength = (int)m_ChannelInfoList[i].Length - 2;
+                            item = new ChannelRawImageData(channelImageDataLength);
+                        }
+                        break;
+                    case ECompression.RLECompression:
+                        {
+                            item = new ChannelRLEImageData(m_Height);
+                        }
+                        break;
+                    default:
+                        {
+                            var channelImageDataLength = (int)m_ChannelInfoList[i].Length - 2;
+                            item = new ChannelRawImageData(channelImageDataLength);
+                        }
+                        break;
+                }
+                item.Parse(reader);
+                ChannelImageDataList.Add(item);
             }
-            ImageData.Parse(reader);
         }
     }
 
@@ -744,13 +762,16 @@ namespace PsdParse
         public void Parse(Reader reader)
         {
             Length = reader.ReadUInt32();
-            var startPosition = reader.BaseStream.Position;
-            var endPosition = startPosition + Length;
-            OverlayColorSpace = reader.ReadUInt16();
-            ColorComponents = reader.ReadUInt64();
-            Opacity = reader.ReadUInt16();
-            Kind = reader.ReadByte();
-            Filler = reader.ReadBytes((int)(endPosition - reader.BaseStream.Position));
+            if (Length > 0)
+            {
+                var startPosition = reader.BaseStream.Position;
+                var endPosition = startPosition + Length;
+                OverlayColorSpace = reader.ReadUInt16();
+                ColorComponents = reader.ReadUInt64();
+                Opacity = reader.ReadUInt16();
+                Kind = reader.ReadByte();
+                Filler = reader.ReadBytes((int)(endPosition - reader.BaseStream.Position));
+            }
         }
     }
 
@@ -773,8 +794,8 @@ namespace PsdParse
             {
                 switch (value)
                 {
-                    case "8BIM":
-                    case "8B64":
+                    case Const.Signature_8BIM:
+                    case Const.Signature_8B64:
                         break;
                     default:
                         {

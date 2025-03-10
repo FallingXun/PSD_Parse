@@ -57,8 +57,8 @@
     <Compile Include="Runtime\Enum\EMaskParamFlags.cs" />
     <Compile Include="Runtime\Enum\ERGBFormat.cs" />
     <Compile Include="Runtime\Global\Rectangle.cs" />
-    <Compile Include="Runtime\ImageData\RawImageData.cs" />
-    <Compile Include="Runtime\ImageData\RLEImageData.cs" />
+    <Compile Include="Runtime\ChannelImageData\ChannelRawImageData.cs" />
+    <Compile Include="Runtime\ChannelImageData\ChannelRLEImageData.cs" />
     <Compile Include="Runtime\Interface\IStreamParse.cs" />
     <Compile Include="Runtime\IO\Reader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
