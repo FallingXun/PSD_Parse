@@ -26,13 +26,13 @@ namespace PsdParse
         }
 
 
-        public void Parse(BinaryReader reader, Encoding encoding)
+        public void Parse(Reader reader)
         {
             Length = reader.ReadInt32();
             if (Length > 0)
             {
                 ImageResourceBlock = new ImageResourceBlock();
-                ImageResourceBlock.Parse(reader, encoding);
+                ImageResourceBlock.Parse(reader);
             }
         }
     }
@@ -109,28 +109,24 @@ namespace PsdParse
         }
 
 
-        public void Parse(BinaryReader reader, Encoding encoding)
+        public void Parse(Reader reader)
         {
-            Signature = Encoding.ASCII.GetString(reader.ReadBytes(4));
+            Signature = reader.ReadASCIIString(4);
             ImageResourceID = (EImageResourceID)reader.ReadInt16();
 
             // 内存对齐字节大小
             var factor = 2u;
 
             // Pascal 字符串要以设定值的倍数存储，这里是 2 字节，读取完后还需要跳过偏移字节
-            var startPosition = reader.BaseStream.Position;
-            var count = (int)reader.ReadByte();
-            var bytes = reader.ReadBytes(count);
-            reader.BaseStream.Position += Utils.RoundUp((uint)(reader.BaseStream.Position - startPosition), factor);
-            Name = encoding.GetString(bytes);
+            Name = reader.ReadPascalString(factor);
 
             ResourceDataSize = reader.ReadUInt32();
-            startPosition = reader.BaseStream.Position;
+            var startPosition = reader.BaseStream.Position;
             var endPosition = startPosition + Utils.RoundUp(ResourceDataSize, factor);
             ResourceData = new ResourceData(ImageResourceID);
             if (ResourceData.ResourceFormat != null)
             {
-                ResourceData.ResourceFormat.Parse(reader, encoding);
+                ResourceData.ResourceFormat.Parse(reader);
             }
             if (reader.BaseStream.Position <= endPosition)
             {

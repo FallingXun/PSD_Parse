@@ -42,20 +42,20 @@ namespace PsdParse
             get; set;
         }
 
-        public void Parse(BinaryReader reader, Encoding encoding)
+        public void Parse(Reader reader)
         {
             Length = reader.ReadUInt32();
             var startPosition = reader.BaseStream.Position;
             var endPosition = startPosition + Length;
             LayerInfo = new LayerInfo();
-            LayerInfo.Parse(reader, encoding);
+            LayerInfo.Parse(reader);
             GlobalLayerMaskInfo = new GlobalLayerMaskInfo();
-            GlobalLayerMaskInfo.Parse(reader, encoding);
+            GlobalLayerMaskInfo.Parse(reader);
             AdditionalLayerInfoList = new List<AdditionalLayerInfo>();
             while (reader.BaseStream.Position < endPosition)
             {
                 var item = new AdditionalLayerInfo();
-                item.Parse(reader, encoding);
+                item.Parse(reader);
                 AdditionalLayerInfoList.Add(item);
             }
             if (reader.BaseStream.Position <= endPosition)
@@ -111,7 +111,7 @@ namespace PsdParse
             get; set;
         }
 
-        public void Parse(BinaryReader reader, Encoding encoding)
+        public void Parse(Reader reader)
         {
             Length = Utils.RoundUp(reader.ReadUInt32(), 2u);
             LayerCount = reader.ReadInt16();
@@ -120,7 +120,7 @@ namespace PsdParse
             for (int i = 0; i < LayerCount; i++)
             {
                 var item = new LayerRecords();
-                item.Parse(reader, encoding);
+                item.Parse(reader);
                 LayerRecordsList.Add(item);
             }
 
@@ -132,7 +132,7 @@ namespace PsdParse
                 var height = LayerRecordsList[i].LayerContentsRectangle.Height;
                 var channelInfoList = LayerRecordsList[i].ChannelInfoList;
                 var item = new ImageDataRecords(width, height, channelInfoList);
-                item.Parse(reader, encoding);
+                item.Parse(reader);
                 ImageDataRecordsList.Add(item);
             }
         }
@@ -278,7 +278,7 @@ namespace PsdParse
             get; set;
         }
 
-        public void Parse(BinaryReader reader, Encoding encoding)
+        public void Parse(Reader reader)
         {
             LayerContentsRectangle = new Rectangle(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
             ChannelCount = reader.ReadUInt16();
@@ -286,27 +286,23 @@ namespace PsdParse
             for (int i = 0; i < ChannelCount; i++)
             {
                 var item = new ChannelInfo();
-                item.Parse(reader, encoding);
+                item.Parse(reader);
                 ChannelInfoList.Add(item);
             }
-            BlendModeSignature = Encoding.ASCII.GetString(reader.ReadBytes(4));
-            BlendModeKey = Encoding.ASCII.GetString(reader.ReadBytes(4));
+            BlendModeSignature = reader.ReadASCIIString(4);
+            BlendModeKey = reader.ReadASCIIString(4);
             Opacity = reader.ReadByte();
             Clipping = (EClipping)reader.ReadByte();
             Flags = reader.ReadByte();
             Filler = reader.ReadByte();
             ExtraDataFieldLength = reader.ReadUInt32();
             LayerMask = new LayerMask();
-            LayerMask.Parse(reader, encoding);
+            LayerMask.Parse(reader);
             LayerBlendingRanges = new LayerBlendingRanges();
-            LayerBlendingRanges.Parse(reader, encoding);
+            LayerBlendingRanges.Parse(reader);
 
             var factor = 4u;
-            var startPosition = reader.BaseStream.Position;
-            var count = (int)reader.ReadByte();
-            var bytes = reader.ReadBytes(count);
-            reader.BaseStream.Position += Utils.RoundUp((uint)(reader.BaseStream.Position - startPosition), factor);
-            LayerName = encoding.GetString(bytes);
+            LayerName = reader.ReadPascalString(factor);
         }
     }
 
@@ -336,7 +332,7 @@ namespace PsdParse
             get; set;
         }
 
-        public void Parse(BinaryReader reader, Encoding encoding)
+        public void Parse(Reader reader)
         {
             ID = reader.ReadInt16();
             Length = reader.ReadUInt32();
@@ -475,7 +471,7 @@ namespace PsdParse
             get; set;
         }
 
-        public void Parse(BinaryReader reader, Encoding encoding)
+        public void Parse(Reader reader)
         {
             Size = reader.ReadUInt32();
             if (Size <= 0)
@@ -557,7 +553,7 @@ namespace PsdParse
         }
 
 
-        public void Parse(BinaryReader reader, Encoding encoding)
+        public void Parse(Reader reader)
         {
             Length = reader.ReadUInt32();
             var startPosition = reader.BaseStream.Position;
@@ -645,7 +641,7 @@ namespace PsdParse
         }
 
 
-        public void Parse(BinaryReader reader, Encoding encoding)
+        public void Parse(Reader reader)
         {
             Compression = (ECompression)reader.ReadUInt16();
             var channelCount = m_ChannelInfoList.Count;
@@ -667,7 +663,7 @@ namespace PsdParse
                     }
                     break;
             }
-            ImageData.Parse(reader, encoding);
+            ImageData.Parse(reader);
         }
     }
 
@@ -745,7 +741,7 @@ namespace PsdParse
         }
 
 
-        public void Parse(BinaryReader reader, Encoding encoding)
+        public void Parse(Reader reader)
         {
             Length = reader.ReadUInt32();
             var startPosition = reader.BaseStream.Position;
@@ -837,10 +833,10 @@ namespace PsdParse
             get; set;
         }
 
-        public void Parse(BinaryReader reader, Encoding encoding)
+        public void Parse(Reader reader)
         {
-            Signature = Encoding.ASCII.GetString(reader.ReadBytes(4));
-            Key = Encoding.ASCII.GetString(reader.ReadBytes(4));
+            Signature = reader.ReadASCIIString(4);
+            Key = reader.ReadASCIIString(4);
             DataLength = reader.ReadUInt32();
             if (DataLength > 0)
             {

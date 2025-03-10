@@ -195,9 +195,9 @@ namespace PsdParse
             }
         }
 
-        public void Parse(BinaryReader reader, Encoding encoding)
+        public void Parse(Reader reader)
         {
-            Signature = encoding.GetString(reader.ReadBytes(4));
+            Signature = reader.ReadASCIIString(4);
             Version = reader.ReadInt16();
             ReservedHigh = reader.ReadInt16();
             ReservedLow = reader.ReadInt32();

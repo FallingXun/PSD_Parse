@@ -65,7 +65,7 @@ namespace PsdParse
         }
 
 
-        public void Parse(BinaryReader reader, Encoding encoding)
+        public void Parse(Reader reader)
         {
             ChannelImageDataList = new List<byte[]>(m_ChannelCount);
             for (int i = 0; i < m_ChannelCount; i++)

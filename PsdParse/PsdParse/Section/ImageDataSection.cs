@@ -59,7 +59,7 @@ namespace PsdParse
             m_ColorMode = colorMode;
         }
 
-        public void Parse(BinaryReader reader, Encoding encoding)
+        public void Parse(Reader reader)
         {
             Compression = (ECompression)reader.ReadUInt16();
 
@@ -81,7 +81,7 @@ namespace PsdParse
                     }
                     break;
             }
-            ImageData.Parse(reader, encoding);
+            ImageData.Parse(reader);
         }
     }
 

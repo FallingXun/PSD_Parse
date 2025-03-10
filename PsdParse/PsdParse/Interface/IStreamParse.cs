@@ -7,7 +7,7 @@ namespace PsdParse
 {
     public interface IStreamParse
     {
-        void Parse(BinaryReader reader, Encoding encoding);
+        void Parse(Reader reader);
     }
 
 }

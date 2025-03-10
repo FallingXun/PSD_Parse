@@ -119,7 +119,7 @@ namespace PsdParse
             ImageResourceID = imageResourceID;
         }
 
-        public void Parse(BinaryReader reader, Encoding encoding)
+        public void Parse(Reader reader)
         {
             Format = (ERGBFormat)reader.ReadInt32();
             ThumbnailWidth = reader.ReadUInt32();

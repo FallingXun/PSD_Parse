@@ -86,7 +86,7 @@ namespace PsdParse
         }
         #endregion
 
-        public void Parse(BinaryReader reader, Encoding encoding)
+        public void Parse(Reader reader)
         {
             #region 头文件
             Version = reader.ReadInt32();

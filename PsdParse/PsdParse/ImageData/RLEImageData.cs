@@ -32,7 +32,7 @@ namespace PsdParse
             m_Height = height;
         }
 
-        public void Parse(BinaryReader reader, Encoding encoding)
+        public void Parse(Reader reader)
         {
             RLEChannelImageDataList = new List<RLEChannelImageData>(m_ChannelCount);
             for (int i = 0; i < m_ChannelCount; i++)
@@ -40,7 +40,7 @@ namespace PsdParse
                 var item = new RLEChannelImageData(m_Height);
                 for (int j = 0; j < m_Height; j++)
                 {
-                    item.Parse(reader, encoding);
+                    item.Parse(reader);
                 }
                 RLEChannelImageDataList.Add(item);
             }
@@ -76,7 +76,7 @@ namespace PsdParse
             m_Height = height;
         }
 
-        public void Parse(BinaryReader reader, Encoding encoding)
+        public void Parse(Reader reader)
         {
             int channelImageDataLength = 0;
             LineDataLengthList = new List<ushort>(m_Height);

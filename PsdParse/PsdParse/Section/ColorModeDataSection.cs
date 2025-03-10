@@ -27,7 +27,7 @@ namespace PsdParse
             get; set;
         }
 
-        public void Parse(BinaryReader reader, Encoding encoding)
+        public void Parse(Reader reader)
         {
             Length = reader.ReadInt32();
             var startPosition = reader.BaseStream.Position;
