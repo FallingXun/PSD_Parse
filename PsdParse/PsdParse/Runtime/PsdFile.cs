@@ -12,9 +12,15 @@ namespace PsdParse
         private LayerAndMaskInformationSection m_LayerAndMaskInformation;
         private ImageDataSection m_ImageData;
 
-        public PsdFile(Stream stream, Encoding encoding)
+        public PsdFile(string path, Encoding encoding)
         {
-            var reader = new Reader(stream);
+            FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read);
+            Init(stream, encoding);
+        }
+
+        private void Init(Stream stream, Encoding encoding)
+        {
+            var reader = new Reader(stream, encoding);
 
             m_FileHeader = new FileHeaderSection();
             m_FileHeader.Parse(reader);
