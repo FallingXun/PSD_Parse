@@ -61,7 +61,7 @@ namespace PsdParse
         }
     }
 
-
+    #region 图像资源段（Image Resources Section）- 图像资源块（Image Resource Blocks）
     /// <summary>
     /// 图像资源段-图像资源块
     /// </summary>
@@ -103,7 +103,7 @@ namespace PsdParse
                 {
                     if ((value > EImageResourceID.PathInfoStart && value < EImageResourceID.PathInfoEnd) == false && (value > EImageResourceID.PluginResourceStart && value < EImageResourceID.PluginResourceEnd) == false)
                     {
-                        throw new Exception(string.Format("PSD 文件（图像资源段-图像资源块）异常，ImageResource:{0}", value));
+                        Console.Write(string.Format("PSD 文件（图像资源段-图像资源块）异常，ImageResource:{0}", value));
                     }
                 }
                 m_ImageResourceID = value;
@@ -151,10 +151,7 @@ namespace PsdParse
             var startPosition = reader.BaseStream.Position;
             var endPosition = startPosition + Utils.RoundUp(ResourceDataSize, factor);
             ResourceData = new ResourceData(ImageResourceID, ResourceDataSize);
-            if (ResourceData.ResourceFormat != null)
-            {
-                ResourceData.ResourceFormat.Parse(reader);
-            }
+            ResourceData.Parse(reader);
             if (reader.BaseStream.Position <= endPosition)
             {
                 reader.BaseStream.Position = endPosition;
@@ -170,7 +167,7 @@ namespace PsdParse
     /// <summary>
     /// 图像资源段-图像资源块-资源数据
     /// </summary>
-    public class ResourceData
+    public class ResourceData : IStreamParse
     {
         /// <summary>
         /// 图像资源ID
@@ -184,6 +181,7 @@ namespace PsdParse
         /// <summary>
         /// 格式数据
         /// </summary>
+        [ByteSize()]
         public IStreamParse ResourceFormat
         {
             get; set;
@@ -193,7 +191,12 @@ namespace PsdParse
         {
             m_ImageResourceID = imageResourceID;
             m_DataSize = dataSize;
-            switch (imageResourceID)
+
+        }
+
+        public void Parse(Reader reader)
+        {
+            switch (m_ImageResourceID)
             {
                 case EImageResourceID.GridAndGuidesInfo_PS4:
                     {
@@ -203,16 +206,18 @@ namespace PsdParse
                 case EImageResourceID.ThumbnailResource_PS4:
                 case EImageResourceID.ThumbnailResource_PS5:
                     {
-                        ResourceFormat = new ThumbnailResourceFormat(imageResourceID);
+                        ResourceFormat = new ThumbnailResourceFormat(m_ImageResourceID);
                     }
                     break;
                 default:
                     {
                         // todo：参考其他 ResourceFormat 实现
-                        ResourceFormat = new DefaultResourceFormat(imageResourceID, dataSize);
+                        ResourceFormat = new DefaultResourceFormat(m_ImageResourceID, m_DataSize);
                     }
                     break;
             }
+            ResourceFormat.Parse(reader);
         }
     }
+    #endregion
 }

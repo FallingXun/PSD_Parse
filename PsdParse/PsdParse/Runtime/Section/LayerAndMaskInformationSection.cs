@@ -72,7 +72,7 @@ namespace PsdParse
         }
     }
 
-    #region 图层信息 LayerInfo
+    #region 图层和蒙版信息段（Layer and Mask Information Section）- 图层信息（Layer info）
     /// <summary>
     /// 图层和蒙版信息段-图层信息
     /// </summary>
@@ -136,7 +136,7 @@ namespace PsdParse
                     var width = LayerRecordsList[i].LayerContentsRectangle.Width;
                     var height = LayerRecordsList[i].LayerContentsRectangle.Height;
                     var channelInfoList = LayerRecordsList[i].ChannelInfoList;
-                    var item = new ImageDataRecords(width, height, channelInfoList);
+                    var item = new ImageDataRecords(LayerRecordsList[i]);
                     item.Parse(reader);
                     ImageDataRecordsList.Add(item);
                 }
@@ -144,14 +144,16 @@ namespace PsdParse
         }
     }
 
-    #region 图层和蒙版信息段-图层信息-图层记录 LayerRecords
+    #region 图层和蒙版信息段（Layer and Mask Information Section）- 图层信息（Layer info）- 图层记录（Layer records）
     /// <summary>
     /// 图层和蒙版信息段-图层信息-图层记录
     /// </summary>
     public class LayerRecords : IStreamParse
     {
         /// <summary>
-        /// 包含图层内容的矩形坐标（4 * 4字节），指定上、左、下、右坐标
+        /// 包含图层内容的矩形坐标（4 * 4字节），指定上、左、下、右坐标。
+        ///     <see cref="ChannelInfo.ID"/> 为 -2 时，使用 <see cref="LayerMask.EnclosingLayerMaskRectangle"/>。
+        ///     <see cref="ChannelInfo.ID"/> 为 -3 时，使用 <see cref="LayerMask.RealEnclosingLayerMaskRectangle"/>。
         /// </summary>
         public Rectangle LayerContentsRectangle
         {
@@ -314,7 +316,7 @@ namespace PsdParse
                 var factor = 4u;
                 LayerName = reader.ReadPascalString(factor);
             }
-            if(reader.BaseStream.Position <= endPosition)
+            if (reader.BaseStream.Position <= endPosition)
             {
                 reader.BaseStream.Position = endPosition;
             }
@@ -330,16 +332,25 @@ namespace PsdParse
     /// </summary>
     public class ChannelInfo : IStreamParse
     {
+        private EChannelID m_ID;
         /// <summary>
-        /// 通道 id（2 字节）：
-        ///     -1 ： 透明 mask
-        ///     -2 ： 用户提供的层 mask 或 矢量 mask
-        ///     -3 ： 用户提供的实际层 mask（当用户 mask 和矢量 mask 同时存在）
+        /// 通道 id（2 字节）
         /// </summary>
         [ByteSize(2)]
-        public short ID
+        public EChannelID ID
         {
-            get; set;
+            get
+            {
+                return m_ID;
+            }
+            set
+            {
+                if (Enum.IsDefined((typeof(EChannelID)), value) == false)
+                {
+                    throw new Exception(string.Format("PSD 文件（ 图层和蒙版信息段-图层信息-图层记录-通道信息），ID:{0}", value));
+                }
+                m_ID = value;
+            }
         }
 
         /// <summary>
@@ -353,7 +364,7 @@ namespace PsdParse
 
         public void Parse(Reader reader)
         {
-            ID = reader.ReadInt16();
+            ID = (EChannelID)reader.ReadInt16();
             Length = reader.ReadUInt32();
         }
     }
@@ -608,8 +619,10 @@ namespace PsdParse
     }
     #endregion
 
+    #region 图层和蒙版信息段（Layer and Mask Information Section）- 图层信息（Layer info）- 图像数据记录（Channel image data，代码称为 ImageDataRecords）
+
     /// <summary>
-    /// 图层和蒙版信息段-图层信息-图像数据记录，官方文档为 Layer info -> Channel image data
+    /// 图层和蒙版信息段-图层信息-图像数据记录（单层所有通道的图像数据记录信息，官方文档为 Layer info -> Channel image data）
     /// </summary>
     public class ImageDataRecords : IStreamParse
     {
@@ -619,73 +632,137 @@ namespace PsdParse
         ///     RLE压缩时，每个通道的字节数组，前面部分为每一行的数据长度，行数为 LayerBottom - LayerTop ，每个数据长度为 2 字节（PSB 为 4 字节），所有行的长度后才是图像数据
         /// </summary>
         [ByteSize()]
-        public List<IStreamParse> ChannelImageDataList
+        public List<ChannelImageData> ChannelImageDataList
         {
             get; set;
         }
 
         /// <summary>
-        /// 宽度
+        /// 当前层信息
         /// </summary>
-        private int m_Width;
-        /// <summary>
-        /// 高度
-        /// </summary>
-        private int m_Height;
-        /// <summary>
-        /// 当前层的所有通道信息
-        /// </summary>
-        private List<ChannelInfo> m_ChannelInfoList;
+        private LayerRecords m_LayerRecords;
 
         /// <summary>
         /// 图像数据记录
         /// </summary>
-        /// <param name="channelInfoList">所有通道信息</param>
-        public ImageDataRecords(int width, int height, List<ChannelInfo> channelInfoList)
+        /// <param name="layerRecords">当前层信息</param>
+        public ImageDataRecords(LayerRecords layerRecords)
         {
-            m_Width = width;
-            m_Height = height;
-            m_ChannelInfoList = channelInfoList;
+            m_LayerRecords = layerRecords;
         }
 
 
         public void Parse(Reader reader)
         {
-            var channelCount = m_ChannelInfoList.Count;
-            ChannelImageDataList = new List<IStreamParse>(channelCount);
+            var channelCount = m_LayerRecords.ChannelCount;
+            ChannelImageDataList = new List<ChannelImageData>(channelCount);
             for (int i = 0; i < channelCount; i++)
             {
-                var compression = (ECompression)reader.ReadUInt16();
-                // 此次只做预读取，方便确定格式，真实读取放到对应格式中统一管理
-                reader.BaseStream.Position -= 2;
-                IStreamParse item = null;
-                switch (compression)
-                {
-                    case ECompression.RawData:
-                        {
-                            var channelImageDataLength = (int)m_ChannelInfoList[i].Length - 2;
-                            item = new ChannelRawImageData(channelImageDataLength);
-                        }
-                        break;
-                    case ECompression.RLECompression:
-                        {
-                            item = new ChannelRLEImageData(m_Height);
-                        }
-                        break;
-                    default:
-                        {
-                            var channelImageDataLength = (int)m_ChannelInfoList[i].Length - 2;
-                            item = new ChannelRawImageData(channelImageDataLength);
-                        }
-                        break;
-                }
+                var item = new ChannelImageData(m_LayerRecords, m_LayerRecords.ChannelInfoList[i]);
                 item.Parse(reader);
                 ChannelImageDataList.Add(item);
             }
         }
     }
 
+    /// <summary>
+    /// 图层和蒙版信息段-图层信息-图像数据记录-通道图像数据
+    /// </summary>
+    public class ChannelImageData : IStreamParse
+    {
+        private ECompression m_Compression;
+        /// <summary>
+        /// 压缩格式（2 字节）
+        /// </summary>
+        [ByteSize(2)]
+        public ECompression Compression
+        {
+            get
+            {
+                return m_Compression;
+            }
+            set
+            {
+                if (Enum.IsDefined(typeof(ECompression), value) == false)
+                {
+                    throw new Exception(string.Format("PSD 文件（图层和蒙版信息段-图层信息-图像数据记录-通道图像数据）异常，Compression:{0}", value));
+                }
+                m_Compression = value;
+            }
+        }
+
+        public IStreamParse Data
+        {
+            get; set;
+        }
+
+
+        /// <summary>
+        /// 当前层信息
+        /// </summary>
+        private LayerRecords m_LayerRecords;
+        /// <summary>
+        /// 当前通道信息
+        /// </summary>
+        private ChannelInfo m_ChannelInfo;
+
+        public ChannelImageData(LayerRecords layerRecords, ChannelInfo channelInfo)
+        {
+            m_LayerRecords = layerRecords;
+            m_ChannelInfo = channelInfo;
+        }
+
+        public void Parse(Reader reader)
+        {
+            Compression = (ECompression)reader.ReadUInt16();
+
+            var height = 0;
+            switch (m_ChannelInfo.ID)
+            {
+                case EChannelID.UserMaskAndVectorMask:
+                    {
+                        height = m_LayerRecords.LayerMask.RealEnclosingLayerMaskRectangle.Height;
+                    }
+                    break;
+                case EChannelID.UserMaskOrVectorMask:
+                    {
+                        height = m_LayerRecords.LayerMask.EnclosingLayerMaskRectangle.Height;
+                    }
+                    break;
+                default:
+                    {
+                        height = m_LayerRecords.LayerContentsRectangle.Height;
+                    }
+                    break;
+            }
+            switch (Compression)
+            {
+                case ECompression.RawData:
+                    {
+                        var channelImageDataLength = (int)m_ChannelInfo.Length - 2;
+                        Data = new ChannelRawImageData(channelImageDataLength);
+                    }
+                    break;
+                case ECompression.RLECompression:
+                    {
+                        Data = new ChannelRLEImageData(height);
+                    }
+                    break;
+                default:
+                    {
+                        var channelImageDataLength = (int)m_ChannelInfo.Length - 2;
+                        Data = new ChannelDefaultImageData(Compression, channelImageDataLength);
+                    }
+                    break;
+            }
+            Data.Parse(reader);
+        }
+    }
     #endregion
+
+    #endregion
+
+    #region 图层和蒙版信息段（Layer and Mask Information Section）-> 全局图层蒙版信息（Global layer mask info）
 
     /// <summary>
     /// 图层和蒙版信息段-全局图层蒙版信息
@@ -728,15 +805,9 @@ namespace PsdParse
             }
             set
             {
-                switch (value)
+                if (value < Const.GlobalLayerMaskInfo_Opacity_Transparent || value > Const.GlobalLayerMaskInfo_Opacity_Opaque)
                 {
-                    case Const.GlobalLayerMaskInfo_Opacity_Transparent:
-                    case Const.GlobalLayerMaskInfo_Opacity_Opaque:
-                        break;
-                    default:
-                        {
-                            throw new Exception(string.Format("PSD 文件（图层和蒙版信息段-全局图层蒙版信息）异常，Opacity:{0}", value));
-                        }
+                    throw new Exception(string.Format("PSD 文件（图层和蒙版信息段-全局图层蒙版信息）异常，Opacity:{0}", value));
                 }
                 m_Opacity = value;
             }
@@ -775,6 +846,9 @@ namespace PsdParse
         }
     }
 
+    #endregion
+
+    #region 图层和蒙版信息段（Layer and Mask Information Section）-> 其他层信息（Additional Layer Information）
     /// <summary>
     /// 图层和蒙版信息段-其他层信息
     /// </summary>
@@ -820,30 +894,18 @@ namespace PsdParse
             {
                 if (LayerKeyConst.IsDefined(value) == false)
                 {
-                    throw new Exception(string.Format("PSD 文件（图层和蒙版信息段-其他层信息）异常，Key:{0}", value));
+                    Console.Write(string.Format("PSD 文件（图层和蒙版信息段-其他层信息）异常，Key:{0}", value));
                 }
                 m_Key = value;
             }
         }
 
-        private uint m_DataLength;
         /// <summary>
         /// 数据长度（4 字节），偶数值，PSB 中 LMsk, Lr16, Lr32, Layr, Mt16, Mt32, Mtrn, Alph, FMsk, lnk2, FEid, FXid, PxSD 为 8 字节
         /// </summary>
         public uint DataLength
         {
-            get
-            {
-                return m_DataLength;
-            }
-            set
-            {
-                if (value % 2 > 0)
-                {
-                    throw new Exception(string.Format("PSD 文件（图层和蒙版信息段-其他层信息）异常，DataLength:{0}", value));
-                }
-                m_DataLength = value;
-            }
+            get;set;
         }
 
         /// <summary>
@@ -859,11 +921,20 @@ namespace PsdParse
             Signature = reader.ReadASCIIString(4);
             Key = reader.ReadASCIIString(4);
             DataLength = reader.ReadUInt32();
-            if (DataLength > 0)
+            var startPosition = reader.BaseStream.Position;
+            // 文档中说明长度值 Length 为偶数字节数，实际上大部分 key 的长度值为 4 的倍数的偏移长度，部分 key（LMsk）为偶数偏移长度，其他 key（Txt2, Lr16, Lr32）为无偏移长度。而无论长度值为多少，数据块长度最终都会对齐到 4 的倍数。
+            var endPosition = startPosition + Utils.RoundUp(DataLength, 4u);
+            Data = reader.ReadBytes((int)DataLength);
+            if (reader.BaseStream.Position <= endPosition)
             {
-                Data = reader.ReadBytes((int)DataLength);
+                reader.BaseStream.Position = endPosition;
+            }
+            else
+            {
+                throw new Exception(string.Format("PSD 文件（图层和蒙版信息段-图层信息-图层记录-图层混合范围）异常，数据超长:{0}，DataLength:{1}", reader.BaseStream.Position - startPosition, DataLength));
             }
         }
     }
+    #endregion
 
 }

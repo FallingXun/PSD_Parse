@@ -49,19 +49,19 @@ namespace PsdParse
         public const string KnockoutSetting = "knko";
         public const string ProtectedSetting = "lspf";
         public const string SheetcolorSetting = "lclr";
-        public const string ReferencePoint  = "fxrp";
-        public const string GradientSetting = "grdm";
+        public const string ReferencePoint = "fxrp";
+        //public const string GradientSetting = "grdm";
         public const string SectionDividerSetting = "lsct";
         public const string ChannelBlendingRestrictionsSetting = "brst";
-        public const string SolidColorSheetSetting = "SoCo";
-        public const string PatternFillSetting = "PtFl";
-        public const string GradientFillSetting = "GdFl";
+        //public const string SolidColorSheetSetting = "SoCo";
+        //public const string PatternFillSetting = "PtFl";
+        //public const string GradientFillSetting = "GdFl";
         public const string VectorMaskSetting = "vmsk";
         public const string VectorMaskSetting_PSCS6 = "vsms";
         public const string TypeToolObjectSetting = "TySh";
         public const string ForeignEffectID = "ffxi";
         public const string LayerNameSourceSetting = "lnsr";
-        public const string PatternData  = "shpa";
+        public const string PatternData = "shpa";
         public const string MetadataSetting = "shmd";
 
 
@@ -77,7 +77,7 @@ namespace PsdParse
 
 
         #region Photoshop CS3
-        public const string BlackWhite = "blwh";
+        //public const string BlackWhite = "blwh";
         public const string TextEngineData = "Txt2";
         //public const string Vibrance = "vibA";
         public const string FilterMask = "FMsk";
@@ -116,11 +116,11 @@ namespace PsdParse
         #endregion
 
         #region Photoshop 2020
-        public const string CompositorUsed= "cinf";
+        public const string CompositorUsed = "cinf";
 
         #endregion
 
-        public const string BrightnessAndContrast = "brit";
+        //public const string BrightnessAndContrast = "brit";
         //public const string ChannelMixer = "mixr";
         public const string PlacedLayer = "plLd";   //(replaced by SoLd in Photoshop CS3)
         public const string LinkedLayer = "lnkD";
@@ -137,6 +137,87 @@ namespace PsdParse
 
         public static bool IsDefined(string key)
         {
+            switch (key)
+            {
+                case SolidColor:
+                case Gradient:
+                case Pattern:
+                case BrightnessOrContrast:
+                case Levels:
+                case Curves:
+                case Exposure:
+                case Vibrance:
+                case OldHueOrSaturation:
+                case NewHueOrSaturation:
+                case ColorBalance:
+                case BlackAndWhite:
+                case PhotoFilter:
+                case ChannelMixer:
+                case ColorLookup:
+                case Invert:
+                case Posterize:
+                case Threshold:
+                case GradientMap:
+                case Selectivecolor:
+                case EffectsLayer:
+                case TypeToolInfo:
+                case UnicodeLayerName:
+                case LayerID:
+                case ObjectBasedEffectsLayerInfo:
+                case Patterns:
+                case Patterns2:
+                case Patterns3:
+                case Annotations:
+                case BlendClippingElements:
+                case BlendInteriorElements:
+                case KnockoutSetting:
+                case ProtectedSetting:
+                case SheetcolorSetting:
+                case ReferencePoint:
+                case SectionDividerSetting:
+                case ChannelBlendingRestrictionsSetting:
+                case VectorMaskSetting:
+                case VectorMaskSetting_PSCS6:
+                case TypeToolObjectSetting:
+                case ForeignEffectID:
+                case LayerNameSourceSetting:
+                case PatternData:
+                case MetadataSetting:
+                case LayerVersion:
+                case TransparencyShapesLayer:
+                case LayerMaskAsGlobaMask:
+                case VectorMaskAsGlobaMask:
+                case TextEngineData:
+                case FilterMask:
+                case PlacedayerData:
+                case ContentGeneratorExtraData:
+                case UnicodePathName:
+                case AnimationEffects:
+                case VectorStrokeData:
+                case VectorStrokeContentData:
+                case UsingAlignedRendering:
+                case VectorOriginationData:
+                case PixelSourceData:
+                case PixelSourceData_PSCC2015:
+                case ArtboardData:
+                case ArtboardData2:
+                case ArtboardData3:
+                case SmartObjectLayerData:
+                case CompositorUsed:
+                case PlacedLayer:
+                case LinkedLayer:
+                case LinkedLayer2:
+                case LinkedLayer3:
+                case SavingMergedTransparency:
+                case SavingMergedTransparency2:
+                case SavingMergedTransparency3:
+                case UserMask:
+                case FilterEffects:
+                case FilterEffects2:
+                    {
+                        return true;
+                    }
+            }
             return false;
         }
     }

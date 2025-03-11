@@ -42,9 +42,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Runtime\Attribute\ByteSizeAttribute.cs" />
+    <Compile Include="Runtime\ChannelCompressImageData\ChannelDefaultImageData.cs" />
     <Compile Include="Runtime\Const\BlendModeKeyConst.cs" />
     <Compile Include="Runtime\Const\Const.cs" />
     <Compile Include="Runtime\Const\LayerKeyConst.cs" />
+    <Compile Include="Runtime\Enum\EChannelID.cs" />
     <Compile Include="Runtime\Enum\EClipping.cs" />
     <Compile Include="Runtime\Enum\EColorMode.cs" />
     <Compile Include="Runtime\Enum\ECompression.cs" />
@@ -57,12 +59,13 @@
     <Compile Include="Runtime\Enum\EMaskParamFlags.cs" />
     <Compile Include="Runtime\Enum\ERGBFormat.cs" />
     <Compile Include="Runtime\Global\Rectangle.cs" />
-    <Compile Include="Runtime\ChannelImageData\ChannelRawImageData.cs" />
-    <Compile Include="Runtime\ChannelImageData\ChannelRLEImageData.cs" />
+    <Compile Include="Runtime\ChannelCompressImageData\ChannelRawImageData.cs" />
+    <Compile Include="Runtime\ChannelCompressImageData\ChannelRLEImageData.cs" />
     <Compile Include="Runtime\Interface\IStreamParse.cs" />
     <Compile Include="Runtime\IO\Reader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Runtime\PsdFile.cs" />
+    <Compile Include="Runtime\ResourceFormat\DefaultResourceFormat.cs" />
     <Compile Include="Runtime\ResourceFormat\GridAndGuidesResourceFormat.cs" />
     <Compile Include="Runtime\ResourceFormat\ThumbnailResourceFormat.cs" />
     <Compile Include="Runtime\Section\ColorModeDataSection.cs" />

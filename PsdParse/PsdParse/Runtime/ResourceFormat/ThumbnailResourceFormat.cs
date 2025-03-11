@@ -1,7 +1,4 @@
-﻿
-using System.IO;
-using System.Text;
-using System;
+﻿using System;
 
 namespace PsdParse
 {
@@ -10,29 +7,6 @@ namespace PsdParse
     /// </summary>
     public class ThumbnailResourceFormat : IStreamParse
     {
-        private EImageResourceID m_ImageResourceID;
-        /// <summary>
-        /// 图像资源ID
-        /// </summary>
-        public EImageResourceID ImageResourceID
-        {
-            get
-            {
-                return m_ImageResourceID;
-            }
-            set
-            {
-                if (Enum.IsDefined(typeof(EImageResourceID), value) == false)
-                {
-                    if ((value > EImageResourceID.PathInfoStart && value < EImageResourceID.PathInfoEnd) == false && (value > EImageResourceID.PluginResourceStart && value < EImageResourceID.PluginResourceEnd) == false)
-                    {
-                        throw new Exception(string.Format("PSD 文件（图像资源段-图像资源块-资源数据-缩略图资源格式）异常，ImageResourceID:{0}", value));
-                    }
-                }
-                m_ImageResourceID = value;
-            }
-        }
-
         private ERGBFormat m_Format;
         /// <summary>
         /// RGB格式（4 字节）
@@ -117,9 +91,12 @@ namespace PsdParse
             get; set;
         }
 
+        private EImageResourceID m_ImageResourceID;
+
+
         public ThumbnailResourceFormat(EImageResourceID imageResourceID)
         {
-            ImageResourceID = imageResourceID;
+            m_ImageResourceID = imageResourceID;
         }
 
         public void Parse(Reader reader)

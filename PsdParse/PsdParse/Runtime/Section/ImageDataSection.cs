@@ -1,7 +1,6 @@
 
 using System.Collections.Generic;
-using System.IO;
-using System.Text;
+using System;
 
 namespace PsdParse
 {
@@ -10,15 +9,45 @@ namespace PsdParse
     /// </summary>
     public class ImageDataSection : IStreamParse
     {
+        private ECompression m_Compression;
         /// <summary>
-        /// 所有通道的图像数据列表
-        ///     RLE压缩时，每个通道的字节数组，前面部分为每一行的数据长度，行数为 LayerBottom - LayerTop ，每个数据长度为 2 字节（PSB 为 4 字节），所有行的长度后才是图像数据
+        /// 压缩格式（2 字节）
+        /// </summary>
+        [ByteSize(2)]
+        public ECompression Compression
+        {
+            get
+            {
+                return m_Compression;
+            }
+            set
+            {
+                if (Enum.IsDefined(typeof(ECompression), value) == false)
+                {
+                    throw new Exception(string.Format("PSD 文件（图像数据段）异常，Compression:{0}", value));
+                }
+                m_Compression = value;
+            }
+        }
+
+        /// <summary>
+        /// 所有通道图像的每行数据长度的列表
         /// </summary>
         [ByteSize()]
-        public List<IStreamParse> ChannelImageDataList
+        public List<ushort[]> ChannelLineLengthList
         {
             get; set;
         }
+
+        /// <summary>
+        /// 所有通道图像的实际图像数据的列表
+        ///     RLE压缩时，每个通道的字节数组，前面部分为每一行的数据长度，行数为 LayerBottom - LayerTop ，每个数据长度为 2 字节（PSB 为 4 字节），所有行的长度后才是图像数据
+        /// </summary>
+        public List<byte[]> ChannelImageBytesList
+        {
+            get; set;
+        }
+
 
         /// <summary>
         /// 通道数
@@ -52,35 +81,66 @@ namespace PsdParse
 
         public void Parse(Reader reader)
         {
-            ChannelImageDataList = new List<IStreamParse>(m_ChannelCount);
+            Compression = (ECompression)reader.ReadUInt16();
+            ChannelLineLengthList = new List<ushort[]>(m_ChannelCount);
             for (int i = 0; i < m_ChannelCount; i++)
             {
-                var compression = (ECompression)reader.ReadUInt16();
-                // 此次只做预读取，方便确定格式，真实读取放到对应格式中统一管理
-                reader.BaseStream.Position -= 2;
-                IStreamParse item = null;
-                switch (compression)
+                switch (Compression)
                 {
                     case ECompression.RawData:
                         {
-                            var channelImageDataLength = ((int)m_Depth * m_Width + 7) / 8 * m_Height;
-                            item = new ChannelRawImageData(channelImageDataLength);
+                            ChannelLineLengthList.Add(null);
                         }
                         break;
                     case ECompression.RLECompression:
                         {
-                            item = new ChannelRLEImageData(m_Height);
+                            var lineLength = new ushort[m_Height];
+                            for (int j = 0; j < m_Height; j++)
+                            {
+                                lineLength[j] = reader.ReadUInt16();
+                            }
+                            ChannelLineLengthList.Add(lineLength);
                         }
                         break;
                     default:
                         {
-                            var channelImageDataLength = ((int)m_Depth * m_Width + 7) / 8 * m_Height;
-                            item = new ChannelRawImageData(channelImageDataLength);
+                            ChannelLineLengthList.Add(null);
                         }
                         break;
                 }
-                item.Parse(reader);
-                ChannelImageDataList.Add(item);
+            }
+
+            ChannelImageBytesList = new List<byte[]>(m_ChannelCount);
+            for (int i = 0; i < m_ChannelCount; i++)
+            {
+                switch (Compression)
+                {
+                    case ECompression.RawData:
+                        {
+                            var length = ((int)m_Depth * m_Width + 7) / 8 * m_Height;
+                            var data = reader.ReadBytes(length);
+                            ChannelImageBytesList.Add(data);
+                        }
+                        break;
+                    case ECompression.RLECompression:
+                        {
+                            var length = 0;
+                            for (int j = 0; j < ChannelLineLengthList[i].Length; j++)
+                            {
+                                length += ChannelLineLengthList[i][j];
+                            }
+                            var data = reader.ReadBytes(length);
+                            ChannelImageBytesList.Add(data);
+                        }
+                        break;
+                    default:
+                        {
+                            var length = ((int)m_Depth * m_Width + 7) / 8 * m_Height;
+                            var data = reader.ReadBytes(length);
+                            ChannelImageBytesList.Add(data);
+                        }
+                        break;
+                }
             }
         }
     }
