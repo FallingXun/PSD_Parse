@@ -16,7 +16,7 @@ namespace PsdParse
         {
             using (FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read))
             {
-                Init(stream, Encoding.Default);
+                Init(stream, Encoding.GetEncoding("GB2312"));
             }
         }
 

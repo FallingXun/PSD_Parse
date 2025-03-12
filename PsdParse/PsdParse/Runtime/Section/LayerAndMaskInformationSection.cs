@@ -88,7 +88,7 @@ namespace PsdParse
         }
 
         /// <summary>
-        /// 图层数（2 字节），如果是负数，则其绝对值是层数，第一个 alpha 通道包含合并结果的透明度数据
+        /// 图层数（2 字节），如果是负数，则其绝对值是实际层数，第一个 alpha 通道包含合并结果的透明度数据
         /// </summary>
         [ByteSize(2)]
         public short LayerCount
@@ -120,9 +120,9 @@ namespace PsdParse
             if (Length > 0)
             {
                 LayerCount = reader.ReadInt16();
-
-                LayerRecordsList = new List<LayerRecords>(LayerCount);
-                for (int i = 0; i < LayerCount; i++)
+                var realLayerCount = Math.Abs(LayerCount);
+                LayerRecordsList = new List<LayerRecords>(realLayerCount);
+                for (int i = 0; i < realLayerCount; i++)
                 {
                     var item = new LayerRecords();
                     item.Parse(reader);
@@ -130,8 +130,8 @@ namespace PsdParse
                 }
 
 
-                ImageDataRecordsList = new List<ImageDataRecords>(LayerCount);
-                for (int i = 0; i < LayerCount; i++)
+                ImageDataRecordsList = new List<ImageDataRecords>(realLayerCount);
+                for (int i = 0; i < realLayerCount; i++)
                 {
                     var width = LayerRecordsList[i].LayerContentsRectangle.Width;
                     var height = LayerRecordsList[i].LayerContentsRectangle.Height;
