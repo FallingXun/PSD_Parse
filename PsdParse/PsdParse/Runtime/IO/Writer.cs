@@ -39,60 +39,59 @@ namespace PsdParse
         {
             var bytes = BitConverter.GetBytes(value);
             Array.Reverse(bytes);
-            base.Write(bytes);
+            WriteBytes(bytes);
         }
 
         public void WriteUInt16(ushort value)
         {
             var bytes = BitConverter.GetBytes(value);
             Array.Reverse(bytes);
-            base.Write(bytes);
+            WriteBytes(bytes);
         }
 
         public void WriteInt32(int value)
         {
             var bytes = BitConverter.GetBytes(value);
             Array.Reverse(bytes);
-            base.Write(bytes);
+            WriteBytes(bytes);
         }
 
         public void WriteUInt32(uint value)
         {
             var bytes = BitConverter.GetBytes(value);
             Array.Reverse(bytes);
-            base.Write(bytes);
+            WriteBytes(bytes);
         }
 
         public void WriteInt64(long value)
         {
             var bytes = BitConverter.GetBytes(value);
             Array.Reverse(bytes);
-            base.Write(bytes);
+            WriteBytes(bytes);
         }
 
         public void WriteUInt64(ulong value)
         {
             var bytes = BitConverter.GetBytes(value);
             Array.Reverse(bytes);
-            base.Write(bytes);
+            WriteBytes(bytes);
         }
 
         public void WriteSingle(float value)
         {
             var bytes = BitConverter.GetBytes(value);
             Array.Reverse(bytes);
-            base.Write(bytes);
+            WriteBytes(bytes);
         }
 
         public void WriteDouble(double value)
         {
             var bytes = BitConverter.GetBytes(value);
             Array.Reverse(bytes);
-            base.Write(bytes);
+            WriteBytes(bytes);
         }
 
         #endregion
-
 
         public void WriteASCIIString(string value, int length)
         {
@@ -101,7 +100,7 @@ namespace PsdParse
             {
                 throw new Exception(string.Format("WriteASCIIString 错误，数据长度：{0}，length：{1}", bytes.Length, length));
             }
-            base.Write(bytes);
+            WriteBytes(bytes);
         }
 
         /// <summary>
@@ -111,13 +110,35 @@ namespace PsdParse
         /// <returns></returns>
         public void WritePascalString(string value, uint factor)
         {
+            var startPosition = BaseStream.Position;
             var bytes = m_Encoding.GetBytes(value);
             byte count = (byte)bytes.Length;
+            WriteByte(count);
+            WriteBytes(bytes);
+            var padding = Utils.GetPadding((uint)(BaseStream.Position - startPosition), factor);
+            WritePadding(padding);
+        }
 
-            var startPosition = BaseStream.Position;
-            base.Write(count);
-            base.Write(bytes);
-            BaseStream.Position = startPosition + Utils.RoundUp((uint)(BaseStream.Position - startPosition), factor);
+
+        /// <summary>
+        /// 写入对齐偏移数据（用 0 填充）
+        /// </summary>
+        /// <param name="padding">偏移长度</param>
+        /// <returns></returns>
+        public void WritePadding(uint padding)
+        {
+            for (int i = 0; i < padding; i++)
+            {
+                WriteByte(0);
+            }
+        }
+
+        public void WriteRectangle(Rectangle value)
+        {
+            WriteInt32(value.Top);
+            WriteInt32(value.Left);
+            WriteInt32(value.Bottom);
+            WriteInt32(value.Right);
         }
     }
 }

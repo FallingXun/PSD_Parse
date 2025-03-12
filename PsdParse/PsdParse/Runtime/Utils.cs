@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace PsdParse
+﻿namespace PsdParse
 {
     public class Utils
     {
@@ -19,5 +13,17 @@ namespace PsdParse
             return (value / factor + (value % factor > 0 ? 1u : 0)) * factor;
         }
 
+        /// <summary>
+        /// 获取偏移字节数
+        /// </summary>
+        /// <param name="length">原长度</param>
+        /// <param name="factor">因数(即 <see cref="RoundUp"/> 的 factor)</param>
+        /// <returns></returns>
+        public static uint GetPadding(uint length,uint factor)
+        {
+            var paddingLength = RoundUp(length, factor);
+            var padding = paddingLength - length;
+            return padding;
+        }
     }
 }

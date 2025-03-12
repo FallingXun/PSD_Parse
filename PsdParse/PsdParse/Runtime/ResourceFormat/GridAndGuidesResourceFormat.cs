@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace PsdParse
 {
@@ -7,8 +8,6 @@ namespace PsdParse
     /// </summary>
     public class GridAndGuidesResourceFormat : IStreamHandler
     {
-        #region 头文件
-
         private int m_Version;
         /// <summary>
         /// 版本号（4 字节），必须为 1
@@ -53,10 +52,52 @@ namespace PsdParse
             get; set;
         }
 
-        #endregion
+        /// <summary>
+        /// 引导资源块列表
+        /// </summary>
+        public List<GuideResourceBlock> GuideResourceBlockList
+        {
+            get;set;
+        }
 
-        #region 数据块
 
+        public void Parse(Reader reader)
+        {
+            Version = reader.ReadInt32();
+            DocumentSpecificGridsHorizontal = reader.ReadUInt32();
+            DocumentSpecificGridsVertical = reader.ReadUInt32();
+            GuideCount = reader.ReadUInt32();
+            if (GuideCount > 0)
+            {
+                GuideResourceBlockList = new List<GuideResourceBlock>((int)GuideCount);
+                for (int i = 0; i < GuideCount; i++)
+                {
+                    var item = new GuideResourceBlock();
+                    item.Parse(reader);
+                    GuideResourceBlockList.Add(item);
+                }
+            }
+        }
+
+        public void Combine(Writer writer)
+        {
+            writer.WriteInt32(Version);
+            writer.WriteUInt32(DocumentSpecificGridsHorizontal);
+            writer.WriteUInt32(DocumentSpecificGridsVertical);
+            writer.WriteUInt32(GuideCount);
+            if (GuideCount > 0)
+            {
+                for (int i = 0; i < GuideCount; i++)
+                {
+                    var item = GuideResourceBlockList[i];
+                    item.Combine(writer);
+                }
+            }
+        }
+    }
+
+    public class GuideResourceBlock:IStreamHandler
+    {
         /// <summary>
         /// 指南在文档坐标中的位置（4 字节），由于导向是垂直的或水平的，因此这只需要是坐标的一个组成部分
         /// </summary>
@@ -81,44 +122,17 @@ namespace PsdParse
                 m_GuideDirection = value;
             }
         }
-        #endregion
 
         public void Parse(Reader reader)
         {
-            #region 头文件
-            Version = reader.ReadInt32();
-            DocumentSpecificGridsHorizontal = reader.ReadUInt32();
-            DocumentSpecificGridsVertical = reader.ReadUInt32();
-            GuideCount = reader.ReadUInt32();
-            #endregion
-
-
-            #region 数据块
-            if (GuideCount > 0)
-            {
-                GuideLocation = reader.ReadInt32();
-                GuideDirection = (EDirection)reader.ReadByte();
-            }
-            #endregion
+            GuideLocation = reader.ReadInt32();
+            GuideDirection = (EDirection)reader.ReadByte();
         }
 
         public void Combine(Writer writer)
         {
-            #region 头文件
-            writer.WriteInt32(Version);
-            writer.WriteUInt32(DocumentSpecificGridsHorizontal);
-            writer.WriteUInt32(DocumentSpecificGridsVertical);
-            writer.WriteUInt32(GuideCount);
-            #endregion
-
-
-            #region 数据块
-            if (GuideCount > 0)
-            {
-                writer.WriteInt32(GuideLocation);
-                writer.WriteByte((byte)GuideDirection);
-            }
-            #endregion
+            writer.WriteInt32(GuideLocation);
+            writer.WriteByte((byte)GuideDirection);
         }
     }
 }

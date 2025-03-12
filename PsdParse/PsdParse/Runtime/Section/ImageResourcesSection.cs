@@ -52,7 +52,7 @@ namespace PsdParse
             }
             if (reader.BaseStream.Position <= endPosition)
             {
-                reader.BaseStream.Position = endPosition;
+                reader.ReadPadding((uint)(endPosition - reader.BaseStream.Position));
             }
             else
             {
@@ -75,7 +75,7 @@ namespace PsdParse
             }
             if (writer.BaseStream.Position <= endPosition)
             {
-                writer.BaseStream.Position = endPosition;
+                writer.WritePadding((uint)(endPosition - writer.BaseStream.Position));
             }
             else
             {
@@ -177,7 +177,7 @@ namespace PsdParse
             ResourceData.Parse(reader);
             if (reader.BaseStream.Position <= endPosition)
             {
-                reader.BaseStream.Position = endPosition;
+                reader.ReadPadding((uint)(endPosition - reader.BaseStream.Position));
             }
             else
             {
@@ -202,7 +202,7 @@ namespace PsdParse
             ResourceData.Combine(writer);
             if (writer.BaseStream.Position <= endPosition)
             {
-                writer.BaseStream.Position = endPosition;
+                writer.WritePadding((uint)(endPosition - writer.BaseStream.Position));
             }
             else
             {

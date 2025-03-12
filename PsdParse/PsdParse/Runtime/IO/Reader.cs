@@ -109,8 +109,30 @@ namespace PsdParse
             var startPosition = BaseStream.Position;
             var count = (int)ReadByte();
             var bytes = ReadBytes(count);
-            BaseStream.Position = startPosition + Utils.RoundUp((uint)(BaseStream.Position - startPosition), factor);
+            var padding = Utils.GetPadding((uint)(BaseStream.Position - startPosition), factor);
+            ReadPadding(padding);
             var value = m_Encoding.GetString(bytes);
+            return value;
+        }
+
+        /// <summary>
+        /// 读取对齐偏移数据
+        /// </summary>
+        /// <param name="padding">偏移长度</param>
+        /// <returns></returns>
+        public byte[] ReadPadding(uint padding)
+        {
+            var value = ReadBytes((int)padding);
+            return value;
+        }
+
+        public Rectangle ReadRectangle()
+        {
+            var top = ReadInt32();
+            var left = ReadInt32();
+            var bottom = ReadInt32();
+            var right = ReadInt32();
+            var value = new Rectangle(top, left, bottom, right);
             return value;
         }
     }

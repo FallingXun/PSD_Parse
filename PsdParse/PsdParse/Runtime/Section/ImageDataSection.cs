@@ -163,7 +163,6 @@ namespace PsdParse
                 }
             }
 
-            ChannelImageBytesList = new List<byte[]>(m_ChannelCount);
             for (int i = 0; i < m_ChannelCount; i++)
             {
                 writer.WriteBytes(ChannelImageBytesList[i]);

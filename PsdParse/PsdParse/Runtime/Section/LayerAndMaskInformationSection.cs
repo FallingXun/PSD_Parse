@@ -63,7 +63,7 @@ namespace PsdParse
             }
             if (reader.BaseStream.Position <= endPosition)
             {
-                reader.BaseStream.Position = endPosition;
+                reader.ReadPadding((uint)(endPosition - reader.BaseStream.Position));
             }
             else
             {
@@ -88,7 +88,7 @@ namespace PsdParse
             }
             if (writer.BaseStream.Position <= endPosition)
             {
-                writer.BaseStream.Position = endPosition;
+                writer.WritePadding((uint)(endPosition - writer.BaseStream.Position));
             }
             else
             {
@@ -141,10 +141,8 @@ namespace PsdParse
 
         public void Parse(Reader reader)
         {
-            // todo：待验证
             Length = reader.ReadUInt32();
-            var roundUpLength = Utils.RoundUp(Length, 2u);
-            if (roundUpLength > 0)
+            if (Length > 0)
             {
                 LayerCount = reader.ReadInt16();
                 var realLayerCount = Math.Abs(LayerCount);
@@ -332,13 +330,17 @@ namespace PsdParse
             get; set;
         }
 
+        /// <summary>
+        /// 其他层信息列表（在 Additional Layer Information 的文档说明中标注了在 Layer records 结构后会有这块数据）
+        /// </summary>
+        public List<AdditionalLayerInfo> AdditionalLayerInfoList
+        {
+            get; set;
+        }
+
         public void Parse(Reader reader)
         {
-            var top = reader.ReadInt32();
-            var left = reader.ReadInt32();
-            var bottom = reader.ReadInt32();
-            var right = reader.ReadInt32();
-            LayerContentsRectangle = new Rectangle(top, left, bottom, right);
+            LayerContentsRectangle = reader.ReadRectangle();
             ChannelCount = reader.ReadUInt16();
             ChannelInfoList = new List<ChannelInfo>(ChannelCount);
             for (int i = 0; i < ChannelCount; i++)
@@ -365,10 +367,17 @@ namespace PsdParse
 
                 var factor = 4u;
                 LayerName = reader.ReadPascalString(factor);
+                AdditionalLayerInfoList = new List<AdditionalLayerInfo>();
+                while (reader.BaseStream.Position < endPosition)
+                {
+                    var item = new AdditionalLayerInfo();
+                    item.Parse(reader);
+                    AdditionalLayerInfoList.Add(item);
+                }
             }
             if (reader.BaseStream.Position <= endPosition)
             {
-                reader.BaseStream.Position = endPosition;
+                reader.ReadPadding((uint)(endPosition - reader.BaseStream.Position));
             }
             else
             {
@@ -378,10 +387,7 @@ namespace PsdParse
 
         public void Combine(Writer writer)
         {
-            writer.WriteInt32(LayerContentsRectangle.Top);
-            writer.WriteInt32(LayerContentsRectangle.Left);
-            writer.WriteInt32(LayerContentsRectangle.Bottom);
-            writer.WriteInt32(LayerContentsRectangle.Right);
+            writer.WriteRectangle(LayerContentsRectangle);
             writer.WriteUInt16(ChannelCount);
             for (int i = 0; i < ChannelCount; i++)
             {
@@ -404,10 +410,15 @@ namespace PsdParse
 
                 var factor = 4u;
                 writer.WritePascalString(LayerName, factor);
+                for (int i = 0; i < AdditionalLayerInfoList.Count; i++)
+                {
+                    var item = AdditionalLayerInfoList[i];
+                    item.Combine(writer);
+                }
             }
             if (writer.BaseStream.Position <= endPosition)
             {
-                writer.BaseStream.Position = endPosition;
+                writer.WritePadding((uint)(endPosition - writer.BaseStream.Position));
             }
             else
             {
@@ -603,11 +614,7 @@ namespace PsdParse
             var endPosition = startPosition + Size;
             if (Size > 0)
             {
-                var top = reader.ReadInt32();
-                var left = reader.ReadInt32();
-                var bottom = reader.ReadInt32();
-                var right = reader.ReadInt32();
-                EnclosingLayerMaskRectangle = new Rectangle(top, left, bottom, right);
+                EnclosingLayerMaskRectangle = reader.ReadRectangle();
                 DefaultColor = (EDefaultColor)reader.ReadByte();
                 Flags = reader.ReadByte();
                 // todo：待验证
@@ -639,16 +646,12 @@ namespace PsdParse
                 {
                     RealFlags = reader.ReadByte();
                     RealUserMaskBackground = (EDefaultColor)reader.ReadByte();
-                    top = reader.ReadInt32();
-                    left = reader.ReadInt32();
-                    bottom = reader.ReadInt32();
-                    right = reader.ReadInt32();
-                    RealEnclosingLayerMaskRectangle = new Rectangle(top, left, bottom, right);
+                    RealEnclosingLayerMaskRectangle = reader.ReadRectangle();
                 }
             }
             if (reader.BaseStream.Position <= endPosition)
             {
-                reader.BaseStream.Position = endPosition;
+                reader.ReadPadding((uint)(endPosition - reader.BaseStream.Position));
             }
             else
             {
@@ -663,10 +666,7 @@ namespace PsdParse
             var endPosition = startPosition + Size;
             if (Size > 0)
             {
-                writer.WriteInt32(EnclosingLayerMaskRectangle.Top);
-                writer.WriteInt32(EnclosingLayerMaskRectangle.Left);
-                writer.WriteInt32(EnclosingLayerMaskRectangle.Bottom);
-                writer.WriteInt32(EnclosingLayerMaskRectangle.Right);
+                writer.WriteRectangle(EnclosingLayerMaskRectangle);
                 writer.WriteByte((byte)DefaultColor);
                 writer.WriteByte(Flags);
                 if ((Flags & (byte)ELayerMaskFlag.UserMaskCameFromRenderingOtherData) > 0)
@@ -697,15 +697,12 @@ namespace PsdParse
                 {
                     writer.WriteByte(RealFlags);
                     writer.WriteByte((byte)RealUserMaskBackground);
-                    writer.WriteInt32(RealEnclosingLayerMaskRectangle.Top);
-                    writer.WriteInt32(RealEnclosingLayerMaskRectangle.Left);
-                    writer.WriteInt32(RealEnclosingLayerMaskRectangle.Bottom);
-                    writer.WriteInt32(RealEnclosingLayerMaskRectangle.Right);
+                    writer.WriteRectangle(RealEnclosingLayerMaskRectangle);
                 }
             }
             if (writer.BaseStream.Position <= endPosition)
             {
-                writer.BaseStream.Position = endPosition;
+                writer.WritePadding((uint)(endPosition - writer.BaseStream.Position));
             }
             else
             {
@@ -770,7 +767,7 @@ namespace PsdParse
             }
             if (reader.BaseStream.Position <= endPosition)
             {
-                reader.BaseStream.Position = endPosition;
+                reader.ReadPadding((uint)(endPosition - reader.BaseStream.Position));
             }
             else
             {
@@ -794,7 +791,7 @@ namespace PsdParse
             }
             if (writer.BaseStream.Position <= endPosition)
             {
-                writer.BaseStream.Position = endPosition;
+                writer.WritePadding((uint)(endPosition - writer.BaseStream.Position));
             }
             else
             {
@@ -1144,7 +1141,7 @@ namespace PsdParse
             Data = reader.ReadBytes((int)DataLength);
             if (reader.BaseStream.Position <= endPosition)
             {
-                reader.BaseStream.Position = endPosition;
+                reader.ReadPadding((uint)(endPosition - reader.BaseStream.Position));
             }
             else
             {
@@ -1164,7 +1161,7 @@ namespace PsdParse
             writer.WriteBytes(Data);
             if (writer.BaseStream.Position <= endPosition)
             {
-                writer.BaseStream.Position = endPosition;
+                writer.WritePadding((uint)(endPosition - writer.BaseStream.Position));
             }
             else
             {

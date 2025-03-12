@@ -194,6 +194,7 @@ namespace PsdParse
                 m_ColorMode = value;
             }
         }
+        
 
         public void Parse(Reader reader)
         {
