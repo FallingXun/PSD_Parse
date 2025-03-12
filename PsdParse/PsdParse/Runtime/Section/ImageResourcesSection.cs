@@ -8,7 +8,7 @@ namespace PsdParse
     /// <summary>
     /// 图像资源段
     /// </summary>
-    public class ImageResourcesSection : IStreamParse
+    public class ImageResourcesSection : IStreamHandler
     {
         /// <summary>
         /// 图像资源段长度（4 字节）
@@ -59,13 +59,36 @@ namespace PsdParse
                 throw new Exception(string.Format("PSD 文件（图像资源段）异常，数据超长:{0}，Length:{1}", reader.BaseStream.Position - startPosition, Length));
             }
         }
+
+        public void Combine(Writer writer)
+        {
+            writer.WriteInt32(Length);
+            var startPosition = writer.BaseStream.Position;
+            var endPosition = startPosition + Length;
+            if (Length > 0)
+            {
+                for (int i = 0; i < ImageResourceBlockList.Count; i++)
+                {
+                    var item = ImageResourceBlockList[i];
+                    item.Combine(writer);
+                }
+            }
+            if (writer.BaseStream.Position <= endPosition)
+            {
+                writer.BaseStream.Position = endPosition;
+            }
+            else
+            {
+                throw new Exception(string.Format("PSD 文件（图像资源段）异常，数据超长:{0}，Length:{1}", writer.BaseStream.Position - startPosition, Length));
+            }
+        }
     }
 
     #region 图像资源段（Image Resources Section）- 图像资源块（Image Resource Blocks）
     /// <summary>
     /// 图像资源段-图像资源块
     /// </summary>
-    public class ImageResourceBlock : IStreamParse
+    public class ImageResourceBlock : IStreamHandler
     {
         private string m_Signature;
         /// <summary>
@@ -161,13 +184,38 @@ namespace PsdParse
                 throw new Exception(string.Format("PSD 文件（图像资源段-图像资源块）异常，数据超长:{0}，ResourceDataSize:{1}", reader.BaseStream.Position - startPosition, ResourceDataSize));
             }
         }
+
+        public void Combine(Writer writer)
+        {
+            writer.WriteASCIIString(Signature, 4);
+            writer.WriteInt16((short)ImageResourceID);
+
+            // 内存对齐字节大小
+            var factor = 2u;
+
+            // Pascal 字符串要以设定值的倍数存储，这里是 2 字节，读取完后还需要跳过偏移字节
+            writer.WritePascalString(Name, factor);
+
+            writer.WriteUInt32(ResourceDataSize);
+            var startPosition = writer.BaseStream.Position;
+            var endPosition = startPosition + Utils.RoundUp(ResourceDataSize, factor);
+            ResourceData.Combine(writer);
+            if (writer.BaseStream.Position <= endPosition)
+            {
+                writer.BaseStream.Position = endPosition;
+            }
+            else
+            {
+                throw new Exception(string.Format("PSD 文件（图像资源段-图像资源块）异常，数据超长:{0}，ResourceDataSize:{1}", writer.BaseStream.Position - startPosition, ResourceDataSize));
+            }
+        }
     }
 
 
     /// <summary>
     /// 图像资源段-图像资源块-资源数据
     /// </summary>
-    public class ResourceData : IStreamParse
+    public class ResourceData : IStreamHandler
     {
         /// <summary>
         /// 图像资源ID
@@ -182,7 +230,7 @@ namespace PsdParse
         /// 格式数据
         /// </summary>
         [ByteSize()]
-        public IStreamParse ResourceFormat
+        public IStreamHandler ResourceFormat
         {
             get; set;
         }
@@ -217,6 +265,11 @@ namespace PsdParse
                     break;
             }
             ResourceFormat.Parse(reader);
+        }
+
+        public void Combine(Writer writer)
+        {
+            ResourceFormat.Combine(writer);
         }
     }
     #endregion

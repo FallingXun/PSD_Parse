@@ -7,7 +7,7 @@ namespace PsdParse
     /// <summary>
     /// Í¼ÏñÊý¾Ý¶Î
     /// </summary>
-    public class ImageDataSection : IStreamParse
+    public class ImageDataSection : IStreamHandler
     {
         private ECompression m_Compression;
         /// <summary>
@@ -141,6 +141,32 @@ namespace PsdParse
                         }
                         break;
                 }
+            }
+        }
+
+        public void Combine(Writer writer)
+        {
+            writer.WriteUInt16((ushort)Compression);
+            for (int i = 0; i < m_ChannelCount; i++)
+            {
+                switch (Compression)
+                {
+                    case ECompression.RLECompression:
+                        {
+                            var lineLength = ChannelLineLengthList[i];
+                            for (int j = 0; j < m_Height; j++)
+                            {
+                                writer.WriteUInt16(lineLength[j]);
+                            }
+                        }
+                        break;
+                }
+            }
+
+            ChannelImageBytesList = new List<byte[]>(m_ChannelCount);
+            for (int i = 0; i < m_ChannelCount; i++)
+            {
+                writer.WriteBytes(ChannelImageBytesList[i]);
             }
         }
     }

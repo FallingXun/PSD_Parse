@@ -8,7 +8,7 @@ namespace PsdParse
     /// <summary>
     /// 图层和蒙版信息段
     /// </summary>
-    public class LayerAndMaskInformationSection : IStreamParse
+    public class LayerAndMaskInformationSection : IStreamHandler
     {
         /// <summary>
         /// 图层和蒙版信息段长度（4 字节，PSB 是 8 字节）
@@ -70,13 +70,38 @@ namespace PsdParse
                 throw new Exception(string.Format("PSD 文件（图层和蒙版信息段）异常，数据超长:{0}，Length:{1}", reader.BaseStream.Position - startPosition, Length));
             }
         }
+
+        public void Combine(Writer writer)
+        {
+            writer.WriteUInt32(Length);
+            var startPosition = writer.BaseStream.Position;
+            var endPosition = startPosition + Length;
+            if (Length > 0)
+            {
+                LayerInfo.Combine(writer);
+                GlobalLayerMaskInfo.Combine(writer);
+                for (int i = 0; i < AdditionalLayerInfoList.Count; i++)
+                {
+                    var item = AdditionalLayerInfoList[i];
+                    item.Combine(writer);
+                }
+            }
+            if (writer.BaseStream.Position <= endPosition)
+            {
+                writer.BaseStream.Position = endPosition;
+            }
+            else
+            {
+                throw new Exception(string.Format("PSD 文件（图层和蒙版信息段）异常，数据超长:{0}，Length:{1}", writer.BaseStream.Position - startPosition, Length));
+            }
+        }
     }
 
     #region 图层和蒙版信息段（Layer and Mask Information Section）- 图层信息（Layer info）
     /// <summary>
     /// 图层和蒙版信息段-图层信息
     /// </summary>
-    public class LayerInfo : IStreamParse
+    public class LayerInfo : IStreamHandler
     {
         /// <summary>
         /// 图层信息长度（4 字节，PSB 为 8 字节），向上取 2 的倍数
@@ -116,8 +141,10 @@ namespace PsdParse
 
         public void Parse(Reader reader)
         {
-            Length = Utils.RoundUp(reader.ReadUInt32(), 2u);
-            if (Length > 0)
+            // todo：待验证
+            Length = reader.ReadUInt32();
+            var roundUpLength = Utils.RoundUp(Length, 2u);
+            if (roundUpLength > 0)
             {
                 LayerCount = reader.ReadInt16();
                 var realLayerCount = Math.Abs(LayerCount);
@@ -133,12 +160,31 @@ namespace PsdParse
                 ImageDataRecordsList = new List<ImageDataRecords>(realLayerCount);
                 for (int i = 0; i < realLayerCount; i++)
                 {
-                    var width = LayerRecordsList[i].LayerContentsRectangle.Width;
-                    var height = LayerRecordsList[i].LayerContentsRectangle.Height;
-                    var channelInfoList = LayerRecordsList[i].ChannelInfoList;
                     var item = new ImageDataRecords(LayerRecordsList[i]);
                     item.Parse(reader);
                     ImageDataRecordsList.Add(item);
+                }
+            }
+        }
+
+        public void Combine(Writer writer)
+        {
+            writer.WriteUInt32(Length);
+            var roundUpLength = Utils.RoundUp(Length, 2u);
+            if (roundUpLength > 0)
+            {
+                writer.WriteInt16(LayerCount);
+                var realLayerCount = Math.Abs(LayerCount);
+                for (int i = 0; i < realLayerCount; i++)
+                {
+                    var item = LayerRecordsList[i];
+                    item.Combine(writer);
+                }
+
+                for (int i = 0; i < realLayerCount; i++)
+                {
+                    var item = ImageDataRecordsList[i];
+                    item.Combine(writer);
                 }
             }
         }
@@ -148,7 +194,7 @@ namespace PsdParse
     /// <summary>
     /// 图层和蒙版信息段-图层信息-图层记录
     /// </summary>
-    public class LayerRecords : IStreamParse
+    public class LayerRecords : IStreamHandler
     {
         /// <summary>
         /// 包含图层内容的矩形坐标（4 * 4字节），指定上、左、下、右坐标。
@@ -288,7 +334,11 @@ namespace PsdParse
 
         public void Parse(Reader reader)
         {
-            LayerContentsRectangle = new Rectangle(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
+            var top = reader.ReadInt32();
+            var left = reader.ReadInt32();
+            var bottom = reader.ReadInt32();
+            var right = reader.ReadInt32();
+            LayerContentsRectangle = new Rectangle(top, left, bottom, right);
             ChannelCount = reader.ReadUInt16();
             ChannelInfoList = new List<ChannelInfo>(ChannelCount);
             for (int i = 0; i < ChannelCount; i++)
@@ -325,12 +375,51 @@ namespace PsdParse
                 throw new Exception(string.Format("PSD 文件（图层和蒙版信息段-图层信息-图层记录），数据超长:{0}，ExtraDataFieldLength:{1}", reader.BaseStream.Position - startPosition, ExtraDataFieldLength));
             }
         }
+
+        public void Combine(Writer writer)
+        {
+            writer.WriteInt32(LayerContentsRectangle.Top);
+            writer.WriteInt32(LayerContentsRectangle.Left);
+            writer.WriteInt32(LayerContentsRectangle.Bottom);
+            writer.WriteInt32(LayerContentsRectangle.Right);
+            writer.WriteUInt16(ChannelCount);
+            for (int i = 0; i < ChannelCount; i++)
+            {
+                var item = ChannelInfoList[i];
+                item.Combine(writer);
+            }
+            writer.WriteASCIIString(BlendModeSignature, 4);
+            writer.WriteASCIIString(BlendModeKey, 4);
+            writer.WriteByte(Opacity);
+            writer.WriteByte((byte)Clipping);
+            writer.WriteByte(Flags);
+            writer.WriteByte(Filler);
+            writer.WriteUInt32(ExtraDataFieldLength);
+            var startPosition = writer.BaseStream.Position;
+            var endPosition = startPosition + ExtraDataFieldLength;
+            if (ExtraDataFieldLength > 0)
+            {
+                LayerMask.Combine(writer);
+                LayerBlendingRanges.Combine(writer);
+
+                var factor = 4u;
+                writer.WritePascalString(LayerName, factor);
+            }
+            if (writer.BaseStream.Position <= endPosition)
+            {
+                writer.BaseStream.Position = endPosition;
+            }
+            else
+            {
+                throw new Exception(string.Format("PSD 文件（图层和蒙版信息段-图层信息-图层记录），数据超长:{0}，ExtraDataFieldLength:{1}", writer.BaseStream.Position - startPosition, ExtraDataFieldLength));
+            }
+        }
     }
 
     /// <summary>
     /// 图层和蒙版信息段-图层信息-图层记录-通道信息（6 字节）
     /// </summary>
-    public class ChannelInfo : IStreamParse
+    public class ChannelInfo : IStreamHandler
     {
         private EChannelID m_ID;
         /// <summary>
@@ -367,12 +456,18 @@ namespace PsdParse
             ID = (EChannelID)reader.ReadInt16();
             Length = reader.ReadUInt32();
         }
+
+        public void Combine(Writer writer)
+        {
+            writer.WriteInt16((short)ID);
+            writer.WriteUInt32(Length);
+        }
     }
 
     /// <summary>
     /// 图层和蒙版信息段-图层信息-图层记录-图层蒙版
     /// </summary>
-    public class LayerMask : IStreamParse
+    public class LayerMask : IStreamHandler
     {
         /// <summary>
         /// 蒙版数据大小（4 字节），用于检查大小和标志，以确定是否存在，如果为零，则后续字段不存在
@@ -508,9 +603,14 @@ namespace PsdParse
             var endPosition = startPosition + Size;
             if (Size > 0)
             {
-                EnclosingLayerMaskRectangle = new Rectangle(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
+                var top = reader.ReadInt32();
+                var left = reader.ReadInt32();
+                var bottom = reader.ReadInt32();
+                var right = reader.ReadInt32();
+                EnclosingLayerMaskRectangle = new Rectangle(top, left, bottom, right);
                 DefaultColor = (EDefaultColor)reader.ReadByte();
                 Flags = reader.ReadByte();
+                // todo：待验证
                 if ((Flags & (byte)ELayerMaskFlag.UserMaskCameFromRenderingOtherData) > 0)
                 {
                     MaskParams = reader.ReadByte();
@@ -539,7 +639,11 @@ namespace PsdParse
                 {
                     RealFlags = reader.ReadByte();
                     RealUserMaskBackground = (EDefaultColor)reader.ReadByte();
-                    RealEnclosingLayerMaskRectangle = new Rectangle(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
+                    top = reader.ReadInt32();
+                    left = reader.ReadInt32();
+                    bottom = reader.ReadInt32();
+                    right = reader.ReadInt32();
+                    RealEnclosingLayerMaskRectangle = new Rectangle(top, left, bottom, right);
                 }
             }
             if (reader.BaseStream.Position <= endPosition)
@@ -552,12 +656,69 @@ namespace PsdParse
             }
         }
 
+        public void Combine(Writer writer)
+        {
+            writer.WriteUInt32(Size);
+            var startPosition = writer.BaseStream.Position;
+            var endPosition = startPosition + Size;
+            if (Size > 0)
+            {
+                writer.WriteInt32(EnclosingLayerMaskRectangle.Top);
+                writer.WriteInt32(EnclosingLayerMaskRectangle.Left);
+                writer.WriteInt32(EnclosingLayerMaskRectangle.Bottom);
+                writer.WriteInt32(EnclosingLayerMaskRectangle.Right);
+                writer.WriteByte((byte)DefaultColor);
+                writer.WriteByte(Flags);
+                if ((Flags & (byte)ELayerMaskFlag.UserMaskCameFromRenderingOtherData) > 0)
+                {
+                    writer.WriteByte(MaskParams);
+                    if ((MaskParams & (byte)EMaskParamFlags.UserMaskDensity) > 0)
+                    {
+                        writer.WriteByte(UserMaskDensity);
+                    }
+                    if ((MaskParams & (byte)EMaskParamFlags.UserMaskFeather) > 0)
+                    {
+                        writer.WriteDouble(UserMaskFeather);
+                    }
+                    if ((MaskParams & (byte)EMaskParamFlags.VectorMaskDensity) > 0)
+                    {
+                        writer.WriteByte(VectorMaskDensity);
+                    }
+                    if ((MaskParams & (byte)EMaskParamFlags.VectorMaskFeather) > 0)
+                    {
+                        writer.WriteDouble(VectorMaskFeather);
+                    }
+                }
+                if (Size == 20)
+                {
+                    writer.WriteUInt16(Padding);
+                }
+                else
+                {
+                    writer.WriteByte(RealFlags);
+                    writer.WriteByte((byte)RealUserMaskBackground);
+                    writer.WriteInt32(RealEnclosingLayerMaskRectangle.Top);
+                    writer.WriteInt32(RealEnclosingLayerMaskRectangle.Left);
+                    writer.WriteInt32(RealEnclosingLayerMaskRectangle.Bottom);
+                    writer.WriteInt32(RealEnclosingLayerMaskRectangle.Right);
+                }
+            }
+            if (writer.BaseStream.Position <= endPosition)
+            {
+                writer.BaseStream.Position = endPosition;
+            }
+            else
+            {
+                throw new Exception(string.Format("PSD 文件（图层和蒙版信息段-图层信息-图层记录-图层蒙版）异常，数据超长:{0}，Size:{1}", writer.BaseStream.Position - startPosition, Size));
+            }
+        }
+
     }
 
     /// <summary>
     /// 图层和蒙版信息段-图层信息-图层记录-图层混合范围
     /// </summary>
-    public class LayerBlendingRanges : IStreamParse
+    public class LayerBlendingRanges : IStreamHandler
     {
         /// <summary>
         /// 图层混合范围数据长度（4 字节）
@@ -616,6 +777,30 @@ namespace PsdParse
                 throw new Exception(string.Format("PSD 文件（图层和蒙版信息段-图层信息-图层记录-图层混合范围）异常，数据超长:{0}，Length:{1}", reader.BaseStream.Position - startPosition, Length));
             }
         }
+
+        public void Combine(Writer writer)
+        {
+            writer.WriteUInt32(Length);
+            var startPosition = writer.BaseStream.Position;
+            var endPosition = startPosition + Length;
+            if (Length > 0)
+            {
+                writer.WriteUInt32(CompositeGrayBlendSource);
+                writer.WriteUInt32(CompositeGrayBlendDestinationRange);
+                for (int i = 0; i < ChannelRange.Count; i++)
+                {
+                    writer.WriteUInt32(ChannelRange[i]);
+                }
+            }
+            if (writer.BaseStream.Position <= endPosition)
+            {
+                writer.BaseStream.Position = endPosition;
+            }
+            else
+            {
+                throw new Exception(string.Format("PSD 文件（图层和蒙版信息段-图层信息-图层记录-图层混合范围）异常，数据超长:{0}，Length:{1}", writer.BaseStream.Position - startPosition, Length));
+            }
+        }
     }
     #endregion
 
@@ -624,7 +809,7 @@ namespace PsdParse
     /// <summary>
     /// 图层和蒙版信息段-图层信息-图像数据记录（单层所有通道的图像数据记录信息，官方文档为 Layer info -> Channel image data）
     /// </summary>
-    public class ImageDataRecords : IStreamParse
+    public class ImageDataRecords : IStreamHandler
     {
 
         /// <summary>
@@ -663,12 +848,22 @@ namespace PsdParse
                 ChannelImageDataList.Add(item);
             }
         }
+
+        public void Combine(Writer writer)
+        {
+            var channelCount = m_LayerRecords.ChannelCount;
+            for (int i = 0; i < channelCount; i++)
+            {
+                var item = ChannelImageDataList[i];
+                item.Combine(writer);
+            }
+        }
     }
 
     /// <summary>
     /// 图层和蒙版信息段-图层信息-图像数据记录-通道图像数据
     /// </summary>
-    public class ChannelImageData : IStreamParse
+    public class ChannelImageData : IStreamHandler
     {
         private ECompression m_Compression;
         /// <summary>
@@ -691,7 +886,7 @@ namespace PsdParse
             }
         }
 
-        public IStreamParse Data
+        public IStreamHandler Data
         {
             get; set;
         }
@@ -757,6 +952,13 @@ namespace PsdParse
             }
             Data.Parse(reader);
         }
+
+        public void Combine(Writer writer)
+        {
+            writer.WriteUInt16((ushort)Compression);
+
+            Data.Combine(writer);
+        }
     }
     #endregion
 
@@ -767,7 +969,7 @@ namespace PsdParse
     /// <summary>
     /// 图层和蒙版信息段-全局图层蒙版信息
     /// </summary>
-    public class GlobalLayerMaskInfo : IStreamParse
+    public class GlobalLayerMaskInfo : IStreamHandler
     {
         /// <summary>
         /// 全局图层蒙版信息长度（4 字节）
@@ -844,6 +1046,21 @@ namespace PsdParse
                 Filler = reader.ReadBytes((int)(endPosition - reader.BaseStream.Position));
             }
         }
+
+        public void Combine(Writer writer)
+        {
+            writer.WriteUInt32(Length);
+            if (Length > 0)
+            {
+                var startPosition = writer.BaseStream.Position;
+                var endPosition = startPosition + Length;
+                writer.WriteUInt16(OverlayColorSpace);
+                writer.WriteUInt64(ColorComponents);
+                writer.WriteUInt16(Opacity);
+                writer.WriteByte(Kind);
+                writer.WriteBytes(Filler);
+            }
+        }
     }
 
     #endregion
@@ -852,7 +1069,7 @@ namespace PsdParse
     /// <summary>
     /// 图层和蒙版信息段-其他层信息
     /// </summary>
-    public class AdditionalLayerInfo : IStreamParse
+    public class AdditionalLayerInfo : IStreamHandler
     {
         private string m_Signature;
         /// <summary>
@@ -905,7 +1122,7 @@ namespace PsdParse
         /// </summary>
         public uint DataLength
         {
-            get;set;
+            get; set;
         }
 
         /// <summary>
@@ -932,6 +1149,26 @@ namespace PsdParse
             else
             {
                 throw new Exception(string.Format("PSD 文件（图层和蒙版信息段-图层信息-图层记录-图层混合范围）异常，数据超长:{0}，DataLength:{1}", reader.BaseStream.Position - startPosition, DataLength));
+            }
+        }
+
+
+        public void Combine(Writer writer)
+        {
+            writer.WriteASCIIString(Signature, 4);
+            writer.WriteASCIIString(Key, 4);
+            writer.WriteUInt32(DataLength);
+            var startPosition = writer.BaseStream.Position;
+            // 文档中说明长度值 Length 为偶数字节数，实际上大部分 key 的长度值为 4 的倍数的偏移长度，部分 key（LMsk）为偶数偏移长度，其他 key（Txt2, Lr16, Lr32）为无偏移长度。而无论长度值为多少，数据块长度最终都会对齐到 4 的倍数。
+            var endPosition = startPosition + Utils.RoundUp(DataLength, 4u);
+            writer.WriteBytes(Data);
+            if (writer.BaseStream.Position <= endPosition)
+            {
+                writer.BaseStream.Position = endPosition;
+            }
+            else
+            {
+                throw new Exception(string.Format("PSD 文件（图层和蒙版信息段-图层信息-图层记录-图层混合范围）异常，数据超长:{0}，DataLength:{1}", writer.BaseStream.Position - startPosition, DataLength));
             }
         }
     }

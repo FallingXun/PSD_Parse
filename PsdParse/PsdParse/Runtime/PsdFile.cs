@@ -16,7 +16,7 @@ namespace PsdParse
         {
             using (FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read))
             {
-                Init(stream, Encoding.GetEncoding("GB2312"));
+                Read(stream, Encoding.GetEncoding("GB2312"));
             }
         }
 
@@ -24,11 +24,24 @@ namespace PsdParse
         {
             using (FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read))
             {
-                Init(stream, encoding);
+                Read(stream, encoding);
             }
         }
 
-        private void Init(Stream stream, Encoding encoding)
+        public PsdFile(string path, Encoding encoding, FileHeaderSection fileHeader, ColorModeDataSection colorModeData, ImageResourcesSection imageResources, LayerAndMaskInformationSection layerAndMaskInformation, ImageDataSection imageData)
+        {
+            m_FileHeader = fileHeader;
+            m_ColorModeData = colorModeData;
+            m_ImageResources = imageResources;
+            m_LayerAndMaskInformation = layerAndMaskInformation;
+            m_ImageData = imageData;
+            using (FileStream stream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write))
+            {
+                Write(stream, Encoding.GetEncoding("GB2312"));
+            }
+        }
+
+        private void Read(Stream stream, Encoding encoding)
         {
             var reader = new Reader(stream, encoding);
 
@@ -46,6 +59,16 @@ namespace PsdParse
 
             m_ImageData = new ImageDataSection(m_FileHeader.ChannelCount, m_FileHeader.Width, m_FileHeader.Height, m_FileHeader.Depth, m_FileHeader.ColorMode);
             m_ImageData.Parse(reader);
+        }
+
+        private void Write(Stream stream, Encoding encoding)
+        {
+            var writer = new Writer(stream, encoding);
+            m_FileHeader.Combine(writer);
+            m_ColorModeData.Combine(writer);
+            m_ImageResources.Combine(writer);
+            m_LayerAndMaskInformation.Combine(writer);
+            m_ImageData.Combine(writer);
         }
     }
 }

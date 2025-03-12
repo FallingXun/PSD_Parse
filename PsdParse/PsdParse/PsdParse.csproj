@@ -61,9 +61,10 @@
     <Compile Include="Runtime\Global\Rectangle.cs" />
     <Compile Include="Runtime\ChannelCompressImageData\ChannelRawImageData.cs" />
     <Compile Include="Runtime\ChannelCompressImageData\ChannelRLEImageData.cs" />
-    <Compile Include="Runtime\Interface\IStreamParse.cs" />
+    <Compile Include="Runtime\Interface\IStreamHandler.cs" />
     <Compile Include="Runtime\IO\Reader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Runtime\IO\Writer.cs" />
     <Compile Include="Runtime\PsdFile.cs" />
     <Compile Include="Runtime\ResourceFormat\DefaultResourceFormat.cs" />
     <Compile Include="Runtime\ResourceFormat\GridAndGuidesResourceFormat.cs" />

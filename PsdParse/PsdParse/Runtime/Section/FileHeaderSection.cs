@@ -7,7 +7,7 @@ namespace PsdParse
     /// <summary>
     /// ÎÄ¼þÍ·¶Î
     /// </summary>
-    public class FileHeaderSection : IStreamParse
+    public class FileHeaderSection : IStreamHandler
     {
         private string m_Signature;
         /// <summary>
@@ -206,6 +206,19 @@ namespace PsdParse
             Width = reader.ReadInt32();
             Depth = (EDepth)reader.ReadInt16();
             ColorMode = (EColorMode)reader.ReadInt16();
+        }
+
+        public void Combine(Writer writer)
+        {
+            writer.WriteASCIIString(Signature, 4);
+            writer.WriteInt16(Version);
+            writer.WriteInt16(ReservedHigh);
+            writer.WriteInt32(ReservedLow);
+            writer.WriteInt16(ChannelCount);
+            writer.WriteInt32(Height);
+            writer.WriteInt32(Width);
+            writer.WriteInt16((short)Depth);
+            writer.WriteInt16((short)ColorMode);
         }
     }
 }

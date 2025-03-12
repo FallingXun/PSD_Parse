@@ -7,7 +7,7 @@ namespace PsdParse
     /// <summary>
     /// 颜色模式数据段
     /// </summary>
-    public class ColorModeDataSection : IStreamParse
+    public class ColorModeDataSection : IStreamHandler
     {
         /// <summary>
         /// 颜色数据长度（4 字节）
@@ -45,6 +45,27 @@ namespace PsdParse
                 throw new Exception(string.Format("PSD 文件（颜色模式数据段）异常，数据超长:{0}，Length:{1}", reader.BaseStream.Position - startPosition, Length));
             }
         }
+
+
+        public void Combine(Writer writer)
+        {
+            writer.WriteInt32(Length);
+            var startPosition = writer.BaseStream.Position;
+            var endPosition = startPosition + Length;
+            if (Length > 0)
+            {
+                writer.WriteBytes(ColorData);
+            }
+            if (writer.BaseStream.Position <= endPosition)
+            {
+                writer.BaseStream.Position = endPosition;
+            }
+            else
+            {
+                throw new Exception(string.Format("PSD 文件（颜色模式数据段）异常，数据超长:{0}，Length:{1}", writer.BaseStream.Position - startPosition, Length));
+            }
+        }
+
     }
 
 }

@@ -5,7 +5,7 @@ namespace PsdParse
     /// <summary>
     /// 图像资源段-图像资源块-资源数据-网格和引导信息格式 <see cref="EImageResourceID.GridAndGuidesInfo_PS4"/>
     /// </summary>
-    public class GridAndGuidesResourceFormat : IStreamParse
+    public class GridAndGuidesResourceFormat : IStreamHandler
     {
         #region 头文件
 
@@ -98,6 +98,25 @@ namespace PsdParse
             {
                 GuideLocation = reader.ReadInt32();
                 GuideDirection = (EDirection)reader.ReadByte();
+            }
+            #endregion
+        }
+
+        public void Combine(Writer writer)
+        {
+            #region 头文件
+            writer.WriteInt32(Version);
+            writer.WriteUInt32(DocumentSpecificGridsHorizontal);
+            writer.WriteUInt32(DocumentSpecificGridsVertical);
+            writer.WriteUInt32(GuideCount);
+            #endregion
+
+
+            #region 数据块
+            if (GuideCount > 0)
+            {
+                writer.WriteInt32(GuideLocation);
+                writer.WriteByte((byte)GuideDirection);
             }
             #endregion
         }

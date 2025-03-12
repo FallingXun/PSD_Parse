@@ -5,7 +5,7 @@ namespace PsdParse
     /// <summary>
     /// 单层单通道的 RLE 图像数据
     /// </summary>
-    public class ChannelRLEImageData : IStreamParse
+    public class ChannelRLEImageData : IStreamHandler
     {
         /// <summary>
         /// 单通道图像每行的数据长度
@@ -44,6 +44,15 @@ namespace PsdParse
                 length += ChannelLineDataLength[i];
             }
             ChannelImageBytes = reader.ReadBytes(length);
+        }
+
+        public void Combine(Writer writer)
+        {
+            for (int i = 0; i < m_Height; i++)
+            {
+                writer.WriteUInt16(ChannelLineDataLength[i]);
+            }
+            writer.WriteBytes(ChannelImageBytes);
         }
     }
 

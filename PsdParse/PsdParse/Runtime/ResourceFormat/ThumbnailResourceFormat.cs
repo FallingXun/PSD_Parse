@@ -5,7 +5,7 @@ namespace PsdParse
     /// <summary>
     /// 图像资源段-图像资源块-资源数据-缩略图资源格式 <see cref="EImageResourceID.ThumbnailResource_PS4"/> 、 <see cref="EImageResourceID.ThumbnailResource_PS5"/>
     /// </summary>
-    public class ThumbnailResourceFormat : IStreamParse
+    public class ThumbnailResourceFormat : IStreamHandler
     {
         private ERGBFormat m_Format;
         /// <summary>
@@ -110,6 +110,19 @@ namespace PsdParse
             BitsPerPixel = reader.ReadUInt16();
             PlanesCount = reader.ReadUInt16();
             JFIFData = reader.ReadBytes((int)CompressionSize);
+        }
+
+        public void Combine(Writer writer)
+        {
+            writer.WriteInt32((int)Format);
+            writer.WriteUInt32(ThumbnailWidth);
+            writer.WriteUInt32(ThumbnailHeight);
+            writer.WriteUInt32(WidthBytesCount);
+            writer.WriteUInt32(TotalSize);
+            writer.WriteUInt32(CompressionSize);
+            writer.WriteUInt16(BitsPerPixel);
+            writer.WriteUInt16(PlanesCount);
+            writer.WriteBytes(JFIFData);
         }
     }
 }

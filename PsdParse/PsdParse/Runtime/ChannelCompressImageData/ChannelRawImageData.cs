@@ -3,7 +3,7 @@
     /// <summary>
     /// 单层单通道的无压缩图像数据
     /// </summary>
-    public class ChannelRawImageData : IStreamParse
+    public class ChannelRawImageData : IStreamHandler
     {
         /// <summary>
         /// 当前通道的图像数据
@@ -25,6 +25,11 @@
         public void Parse(Reader reader)
         {
             ChannelImageBytes = reader.ReadBytes((int)m_ChannelImageBytesLength);
+        }
+
+        public void Combine(Writer writer)
+        {
+            writer.WriteBytes(ChannelImageBytes);
         }
     }
 }

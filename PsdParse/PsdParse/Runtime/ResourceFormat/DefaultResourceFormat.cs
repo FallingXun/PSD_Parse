@@ -5,7 +5,7 @@ namespace PsdParse
     /// <summary>
     /// 图像资源段-图像资源块-资源数据-默认格式（未解析）
     /// </summary>
-    public class DefaultResourceFormat : IStreamParse
+    public class DefaultResourceFormat : IStreamHandler
     {
         public byte[] Data
         {
@@ -26,6 +26,11 @@ namespace PsdParse
         public void Parse(Reader reader)
         {
             Data = reader.ReadBytes((int)m_DataSize);
+        }
+
+        public void Combine(Writer writer)
+        {
+            writer.WriteBytes(Data);
         }
     }
 }
