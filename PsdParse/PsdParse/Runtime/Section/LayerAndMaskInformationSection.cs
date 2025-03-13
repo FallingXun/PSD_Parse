@@ -481,7 +481,11 @@ namespace PsdParse
     public class LayerMask : IStreamHandler
     {
         /// <summary>
-        /// 蒙版数据大小（4 字节），用于检查大小和标志，以确定是否存在，如果为零，则后续字段不存在
+        /// 蒙版数据大小（4 字节），用于检查大小和标志，以确定是否存在，如果为零，则后续字段不存在。
+        ///     4 字节：仅有 Size 字段且为 0，即Layer mask 没有数据。
+        ///     24 字节：<see cref="Size"> + <see cref="EnclosingLayerMaskRectangle"> + <see cref="DefaultColor"> + <see cref="Flags"> + <see cref="Padding">
+        ///     40 字节：<see cref="Size"> + <see cref="EnclosingLayerMaskRectangle"> + <see cref="DefaultColor"> + <see cref="Flags"> + <see cref="RealFlags"> + <see cref="RealUserMaskBackground"> + <see cref="RealEnclosingLayerMaskRectangle">
+        ///     其他字节：所有字段
         /// </summary>
         public uint Size
         {
@@ -618,7 +622,7 @@ namespace PsdParse
                 DefaultColor = (EDefaultColor)reader.ReadByte();
                 Flags = reader.ReadByte();
                 // todo：待验证
-                if ((Flags & (byte)ELayerMaskFlag.UserMaskCameFromRenderingOtherData) > 0)
+                if ((Flags & (byte)ELayerMaskFlag.UserVectorMasksHaveParamsApplied) > 0)
                 {
                     MaskParams = reader.ReadByte();
                     if ((MaskParams & (byte)EMaskParamFlags.UserMaskDensity) > 0)
