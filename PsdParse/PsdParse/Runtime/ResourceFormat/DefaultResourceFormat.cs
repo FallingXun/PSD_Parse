@@ -32,5 +32,14 @@ namespace PsdParse
         {
             writer.WriteBytes(Data);
         }
+
+        public int CalculateLength(Calculator calculator)
+        {
+            var length = 0;
+
+            length += calculator.CalculateBytes(Data);
+
+            return length;
+        }
     }
 }

@@ -19,7 +19,7 @@
         /// <param name="length">原长度</param>
         /// <param name="factor">因数(即 <see cref="RoundUp"/> 的 factor)</param>
         /// <returns></returns>
-        public static uint GetPadding(uint length,uint factor)
+        public static uint GetPadding(uint length, uint factor)
         {
             var paddingLength = RoundUp(length, factor);
             var padding = paddingLength - length;

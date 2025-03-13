@@ -33,5 +33,14 @@
         {
             writer.WriteBytes(ChannelImageBytes);
         }
+
+        public int CalculateLength(Calculator calculator)
+        {
+            var length = 0;
+
+            length += calculator.CalculateBytes(ChannelImageBytes);
+
+            return length;
+        }
     }
 }

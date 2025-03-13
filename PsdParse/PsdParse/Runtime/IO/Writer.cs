@@ -104,6 +104,19 @@ namespace PsdParse
         }
 
         /// <summary>
+        /// 写入 Unicode 字符串，Unicode 字符串 = 4 字节字符数 + 字符串内容（长度为字符数的 2 倍）
+        /// </summary>
+        /// <returns></returns>
+        public void WriteUnicodeString(string value)
+        {
+            var bytes = Encoding.BigEndianUnicode.GetBytes(value);
+            var count = bytes.Length / 2;
+            WriteUInt32((uint)count);
+            WriteBytes(bytes);
+        }
+
+
+        /// <summary>
         /// 写入 Pascal 字符串，Pascal 字符串 = 1 个字节长度信息 + 字符串内容 + 对齐偏移
         /// </summary>
         /// <param name="factor">对齐因数（字符串长度需要为此数的倍数）</param>
@@ -139,6 +152,11 @@ namespace PsdParse
             WriteInt32(value.Left);
             WriteInt32(value.Bottom);
             WriteInt32(value.Right);
+        }
+
+        public void WriteDecimal16_16(Decimal16_16 value)
+        {
+            WriteUInt32(value);
         }
     }
 }

@@ -194,7 +194,7 @@ namespace PsdParse
                 m_ColorMode = value;
             }
         }
-        
+
 
         public void Parse(Reader reader)
         {
@@ -220,6 +220,21 @@ namespace PsdParse
             writer.WriteInt32(Width);
             writer.WriteInt16((short)Depth);
             writer.WriteInt16((short)ColorMode);
+        }
+
+        public int CalculateLength(Calculator calculator)
+        {
+            var length = 0;
+            length += calculator.CalculateASCIIString(Signature, 4);
+            length += calculator.CalculateInt16(Version);
+            length += calculator.CalculateInt16(ReservedHigh);
+            length += calculator.CalculateInt32(ReservedLow);
+            length += calculator.CalculateInt16(ChannelCount);
+            length += calculator.CalculateInt32(Height);
+            length += calculator.CalculateInt32(Width);
+            length += calculator.CalculateInt16((short)Depth);
+            length += calculator.CalculateInt16((short)ColorMode);
+            return length;
         }
     }
 }

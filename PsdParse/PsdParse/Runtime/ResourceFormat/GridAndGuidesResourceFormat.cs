@@ -57,7 +57,7 @@ namespace PsdParse
         /// </summary>
         public List<GuideResourceBlock> GuideResourceBlockList
         {
-            get;set;
+            get; set;
         }
 
 
@@ -94,9 +94,29 @@ namespace PsdParse
                 }
             }
         }
+
+
+        public int CalculateLength(Calculator calculator)
+        {
+            var length = 0;
+
+            length += calculator.CalculateInt32(Version);
+            length += calculator.CalculateUInt32(DocumentSpecificGridsHorizontal);
+            length += calculator.CalculateUInt32(DocumentSpecificGridsVertical);
+            length += calculator.CalculateUInt32(GuideCount);
+            if (GuideResourceBlockList != null)
+            {
+                for (int i = 0; i < GuideResourceBlockList.Count; i++)
+                {
+                    var item = GuideResourceBlockList[i];
+                    length += item.CalculateLength(calculator);
+                }
+            }
+            return length;
+        }
     }
 
-    public class GuideResourceBlock:IStreamHandler
+    public class GuideResourceBlock : IStreamHandler
     {
         /// <summary>
         /// 指南在文档坐标中的位置（4 字节），由于导向是垂直的或水平的，因此这只需要是坐标的一个组成部分
@@ -133,6 +153,16 @@ namespace PsdParse
         {
             writer.WriteInt32(GuideLocation);
             writer.WriteByte((byte)GuideDirection);
+        }
+
+        public int CalculateLength(Calculator calculator)
+        {
+            var length = 0;
+
+            length += calculator.CalculateInt32(GuideLocation);
+            length += calculator.CalculateByte((byte)GuideDirection);
+
+            return length;
         }
     }
 }

@@ -168,6 +168,36 @@ namespace PsdParse
                 writer.WriteBytes(ChannelImageBytesList[i]);
             }
         }
+
+
+        public int CalculateLength(Calculator calculator)
+        {
+            var length = 0;
+
+            length += calculator.CalculateUInt16((ushort)Compression);
+            for (int i = 0; i < m_ChannelCount; i++)
+            {
+                switch (Compression)
+                {
+                    case ECompression.RLECompression:
+                        {
+                            var lineLength = ChannelLineLengthList[i];
+                            for (int j = 0; j < m_Height; j++)
+                            {
+                                length += calculator.CalculateUInt16(lineLength[j]);
+                            }
+                        }
+                        break;
+                }
+            }
+
+            for (int i = 0; i < m_ChannelCount; i++)
+            {
+                length += calculator.CalculateBytes(ChannelImageBytesList[i]);
+            }
+
+            return length;
+        }
     }
 
 }

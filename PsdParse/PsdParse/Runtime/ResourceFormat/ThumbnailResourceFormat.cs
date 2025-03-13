@@ -101,7 +101,7 @@ namespace PsdParse
 
         public void Parse(Reader reader)
         {
-            Format = (ERGBFormat)reader.ReadInt32();
+            Format = (ERGBFormat)reader.ReadUInt32();
             ThumbnailWidth = reader.ReadUInt32();
             ThumbnailHeight = reader.ReadUInt32();
             WidthBytesCount = reader.ReadUInt32();
@@ -114,7 +114,7 @@ namespace PsdParse
 
         public void Combine(Writer writer)
         {
-            writer.WriteInt32((int)Format);
+            writer.WriteUInt32((uint)Format);
             writer.WriteUInt32(ThumbnailWidth);
             writer.WriteUInt32(ThumbnailHeight);
             writer.WriteUInt32(WidthBytesCount);
@@ -123,6 +123,23 @@ namespace PsdParse
             writer.WriteUInt16(BitsPerPixel);
             writer.WriteUInt16(PlanesCount);
             writer.WriteBytes(JFIFData);
+        }
+
+        public int CalculateLength(Calculator calculator)
+        {
+            var length = 0;
+
+            length += calculator.CalculateUInt32((uint)Format);
+            length += calculator.CalculateUInt32(ThumbnailWidth);
+            length += calculator.CalculateUInt32(ThumbnailHeight);
+            length += calculator.CalculateUInt32(WidthBytesCount);
+            length += calculator.CalculateUInt32(TotalSize);
+            length += calculator.CalculateUInt32(CompressionSize);
+            length += calculator.CalculateUInt16(BitsPerPixel);
+            length += calculator.CalculateUInt16(PlanesCount);
+            length += calculator.CalculateBytes(JFIFData);
+
+            return length;
         }
     }
 }

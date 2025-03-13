@@ -54,6 +54,19 @@ namespace PsdParse
             }
             writer.WriteBytes(ChannelImageBytes);
         }
+
+        public int CalculateLength(Calculator calculator)
+        {
+            var length = 0;
+
+            for (int i = 0; i < m_Height; i++)
+            {
+                length += calculator.CalculateUInt16(ChannelLineDataLength[i]);
+            }
+            length += calculator.CalculateBytes(ChannelImageBytes);
+
+            return length;
+        }
     }
 
 }

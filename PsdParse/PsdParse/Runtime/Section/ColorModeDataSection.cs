@@ -66,6 +66,29 @@ namespace PsdParse
             }
         }
 
+        public int CalculateLength(Calculator calculator)
+        {
+            var length = 0;
+
+            length += calculator.CalculateInt32(Length);
+            var startLength = length;
+            var endLength = startLength + Length;
+            if (Length > 0)
+            {
+                length += calculator.CalculateBytes(ColorData);
+
+            }
+            if (length <= endLength)
+            {
+                length += calculator.CalculatePadding((uint)(endLength - length));
+            }
+            else
+            {
+                throw new Exception(string.Format("PSD 文件（颜色模式数据段）异常，数据超长:{0}，Length:{1}", length - startLength, Length));
+            }
+
+            return length;
+        }
     }
 
 }

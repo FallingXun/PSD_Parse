@@ -100,6 +100,20 @@ namespace PsdParse
         }
 
         /// <summary>
+        /// 读取 Unicode 字符串，Unicode 字符串 = 4 字节字符数 + 字符串内容（长度为字符数的 2 倍）
+        /// </summary>
+        /// <returns></returns>
+        public string ReadUnicodeString()
+        {
+            // 字符数量
+            var count = ReadUInt32();
+            var length = count * 2;
+            var bytes = ReadBytes((int)length);
+            var value = Encoding.BigEndianUnicode.GetString(bytes);
+            return value;
+        }
+
+        /// <summary>
         /// 读取 Pascal 字符串，Pascal 字符串 = 1 个字节长度信息 + 字符串内容 + 对齐偏移
         /// </summary>
         /// <param name="factor">对齐因数（字符串长度需要为此数的倍数）</param>
@@ -126,6 +140,7 @@ namespace PsdParse
             return value;
         }
 
+
         public Rectangle ReadRectangle()
         {
             var top = ReadInt32();
@@ -133,6 +148,13 @@ namespace PsdParse
             var bottom = ReadInt32();
             var right = ReadInt32();
             var value = new Rectangle(top, left, bottom, right);
+            return value;
+        }
+
+        public Decimal16_16 ReadDecimal16_16()
+        {
+            var data = ReadUInt32();
+            var value = new Decimal16_16(data);
             return value;
         }
     }

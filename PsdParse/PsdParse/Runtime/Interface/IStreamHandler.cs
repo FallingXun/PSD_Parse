@@ -5,6 +5,8 @@ namespace PsdParse
         void Parse(Reader reader);
 
         void Combine(Writer writer);
+
+        int CalculateLength(Calculator calculator);
     }
 
 }

@@ -95,6 +95,32 @@ namespace PsdParse
                 throw new Exception(string.Format("PSD 文件（图层和蒙版信息段）异常，数据超长:{0}，Length:{1}", writer.BaseStream.Position - startPosition, Length));
             }
         }
+
+        public int CalculateLength(Calculator calculator)
+        {
+            var length = 0;
+
+            length += calculator.CalculateUInt32(Length);
+            var startLength = length;
+            var endLength = startLength + Length;
+            length += LayerInfo.CalculateLength(calculator);
+            length += GlobalLayerMaskInfo.CalculateLength(calculator);
+            for (int i = 0; i < AdditionalLayerInfoList.Count; i++)
+            {
+                var item = AdditionalLayerInfoList[i];
+                length += item.CalculateLength(calculator);
+            }
+            if (length <= endLength)
+            {
+                length += calculator.CalculatePadding((uint)(endLength - length));
+            }
+            else
+            {
+                throw new Exception(string.Format("PSD 文件（图层和蒙版信息段）异常，数据超长:{0}，Length:{1}", length - startLength, Length));
+            }
+
+            return length;
+        }
     }
 
     #region 图层和蒙版信息段（Layer and Mask Information Section）- 图层信息（Layer info）
@@ -168,8 +194,7 @@ namespace PsdParse
         public void Combine(Writer writer)
         {
             writer.WriteUInt32(Length);
-            var roundUpLength = Utils.RoundUp(Length, 2u);
-            if (roundUpLength > 0)
+            if (Length > 0)
             {
                 writer.WriteInt16(LayerCount);
                 var realLayerCount = Math.Abs(LayerCount);
@@ -185,6 +210,29 @@ namespace PsdParse
                     item.Combine(writer);
                 }
             }
+        }
+
+        public int CalculateLength(Calculator calculator)
+        {
+            var length = 0;
+
+            length += calculator.CalculateUInt32(Length);
+
+            length += calculator.CalculateInt16(LayerCount);
+            var realLayerCount = Math.Abs(LayerCount);
+            for (int i = 0; i < realLayerCount; i++)
+            {
+                var item = LayerRecordsList[i];
+                length += item.CalculateLength(calculator);
+            }
+
+            for (int i = 0; i < realLayerCount; i++)
+            {
+                var item = ImageDataRecordsList[i];
+                length += item.CalculateLength(calculator);
+            }
+
+            return length;
         }
     }
 
@@ -425,6 +473,51 @@ namespace PsdParse
                 throw new Exception(string.Format("PSD 文件（图层和蒙版信息段-图层信息-图层记录），数据超长:{0}，ExtraDataFieldLength:{1}", writer.BaseStream.Position - startPosition, ExtraDataFieldLength));
             }
         }
+
+        public int CalculateLength(Calculator calculator)
+        {
+            var length = 0;
+
+            length += calculator.CalculateRectangle(LayerContentsRectangle);
+            length += calculator.CalculateUInt16(ChannelCount);
+            for (int i = 0; i < ChannelCount; i++)
+            {
+                var item = ChannelInfoList[i];
+                length += item.CalculateLength(calculator);
+            }
+            length += calculator.CalculateASCIIString(BlendModeSignature, 4);
+            length += calculator.CalculateASCIIString(BlendModeKey, 4);
+            length += calculator.CalculateByte(Opacity);
+            length += calculator.CalculateByte((byte)Clipping);
+            length += calculator.CalculateByte(Flags);
+            length += calculator.CalculateByte(Filler);
+            length += calculator.CalculateUInt32(ExtraDataFieldLength);
+            var startLength = length;
+            var endLength = startLength + ExtraDataFieldLength;
+            if (ExtraDataFieldLength > 0)
+            {
+                LayerMask.CalculateLength(calculator);
+                LayerBlendingRanges.CalculateLength(calculator);
+
+                var factor = 4u;
+                length += calculator.CalculatePascalString(LayerName, factor);
+                for (int i = 0; i < AdditionalLayerInfoList.Count; i++)
+                {
+                    var item = AdditionalLayerInfoList[i];
+                    length += item.CalculateLength(calculator);
+                }
+            }
+            if (length <= endLength)
+            {
+                length += calculator.CalculatePadding((uint)(endLength - length));
+            }
+            else
+            {
+                throw new Exception(string.Format("PSD 文件（图层和蒙版信息段-图层信息-图层记录），数据超长:{0}，ExtraDataFieldLength:{1}", length - startLength, ExtraDataFieldLength));
+            }
+
+            return length;
+        }
     }
 
     /// <summary>
@@ -472,6 +565,17 @@ namespace PsdParse
         {
             writer.WriteInt16((short)ID);
             writer.WriteUInt32(Length);
+        }
+
+
+        public int CalculateLength(Calculator calculator)
+        {
+            var length = 0;
+
+            length += calculator.CalculateInt16((short)ID);
+            length += calculator.CalculateUInt32(Length);
+
+            return length;
         }
     }
 
@@ -714,6 +818,59 @@ namespace PsdParse
             }
         }
 
+        public int CalculateLength(Calculator calculator)
+        {
+            var length = 0;
+
+            length += calculator.CalculateUInt32(Size);
+            var startLength = length;
+            var endLength = startLength + Size;
+            if (Size > 0)
+            {
+                length += calculator.CalculateRectangle(EnclosingLayerMaskRectangle);
+                length += calculator.CalculateByte((byte)DefaultColor);
+                length += calculator.CalculateByte(Flags);
+                if ((Flags & (byte)ELayerMaskFlag.UserMaskCameFromRenderingOtherData) > 0)
+                {
+                    length += calculator.CalculateByte(MaskParams);
+                    if ((MaskParams & (byte)EMaskParamFlags.UserMaskDensity) > 0)
+                    {
+                        length += calculator.CalculateByte(UserMaskDensity);
+                    }
+                    if ((MaskParams & (byte)EMaskParamFlags.UserMaskFeather) > 0)
+                    {
+                        length += calculator.CalculateDouble(UserMaskFeather);
+                    }
+                    if ((MaskParams & (byte)EMaskParamFlags.VectorMaskDensity) > 0)
+                    {
+                        length += calculator.CalculateByte(VectorMaskDensity);
+                    }
+                    if ((MaskParams & (byte)EMaskParamFlags.VectorMaskFeather) > 0)
+                    {
+                        length += calculator.CalculateDouble(VectorMaskFeather);
+                    }
+                }
+            }
+            if (Size == 20)
+            {
+                length += calculator.CalculateUInt16(Padding);
+            }
+            else
+            {
+                length += calculator.CalculateByte(RealFlags);
+                length += calculator.CalculateByte((byte)RealUserMaskBackground);
+                length += calculator.CalculateRectangle(RealEnclosingLayerMaskRectangle);
+            }
+            if (length <= endLength)
+            {
+                length += calculator.CalculatePadding((uint)(endLength - length));
+            }
+            else
+            {
+                throw new Exception(string.Format("PSD 文件（图层和蒙版信息段-图层信息-图层记录-图层蒙版）异常，数据超长:{0}，Size:{1}", length - startLength, Size));
+            }
+            return length;
+        }
     }
 
     /// <summary>
@@ -802,6 +959,38 @@ namespace PsdParse
                 throw new Exception(string.Format("PSD 文件（图层和蒙版信息段-图层信息-图层记录-图层混合范围）异常，数据超长:{0}，Length:{1}", writer.BaseStream.Position - startPosition, Length));
             }
         }
+
+
+        public int CalculateLength(Calculator calculator)
+        {
+            var length = 0;
+
+            length += calculator.CalculateUInt32(Length);
+            var startLength = length;
+            var endLength = startLength + Length;
+            if (Length > 0)
+            {
+                length += calculator.CalculateUInt32(CompositeGrayBlendSource);
+                length += calculator.CalculateUInt32(CompositeGrayBlendDestinationRange);
+                if (ChannelRange != null)
+                {
+                    for (int i = 0; i < ChannelRange.Count; i++)
+                    {
+                        length += calculator.CalculateUInt32(ChannelRange[i]);
+                    }
+                }
+            }
+            if (length <= endLength)
+            {
+                length += calculator.CalculatePadding((uint)(endLength - length));
+            }
+            else
+            {
+                throw new Exception(string.Format("PSD 文件（图层和蒙版信息段-图层信息-图层记录-图层混合范围）异常，数据超长:{0}，Length:{1}", length - startLength, Length));
+            }
+
+            return length;
+        }
     }
     #endregion
 
@@ -858,6 +1047,23 @@ namespace PsdParse
                 var item = ChannelImageDataList[i];
                 item.Combine(writer);
             }
+        }
+
+
+        public int CalculateLength(Calculator calculator)
+        {
+            var length = 0;
+
+            if (ChannelImageDataList != null)
+            {
+                for (int i = 0; i < ChannelImageDataList.Count; i++)
+                {
+                    var item = ChannelImageDataList[i];
+                    length += item.CalculateLength(calculator);
+                }
+            }
+
+            return length;
         }
     }
 
@@ -960,7 +1166,20 @@ namespace PsdParse
 
             Data.Combine(writer);
         }
+
+
+        public int CalculateLength(Calculator calculator)
+        {
+            var length = 0;
+
+            length += calculator.CalculateUInt16((ushort)Compression);
+
+            length += Data.CalculateLength(calculator);
+
+            return length;
+        }
     }
+
     #endregion
 
     #endregion
@@ -1061,6 +1280,21 @@ namespace PsdParse
                 writer.WriteByte(Kind);
                 writer.WriteBytes(Filler);
             }
+        }
+
+        public int CalculateLength(Calculator calculator)
+        {
+            var length = 0;
+
+            length += calculator.CalculateUInt32(Length);
+            var startLength = length;
+            var endLength = startLength + Length;
+            length += calculator.CalculateUInt16(OverlayColorSpace);
+            length += calculator.CalculateUInt64(ColorComponents);
+            length += calculator.CalculateUInt16(Opacity);
+            length += calculator.CalculateByte(Kind);
+            length += calculator.CalculateBytes(Filler);
+            return length;
         }
     }
 
@@ -1171,6 +1405,31 @@ namespace PsdParse
             {
                 throw new Exception(string.Format("PSD 文件（图层和蒙版信息段-图层信息-图层记录-图层混合范围）异常，数据超长:{0}，DataLength:{1}", writer.BaseStream.Position - startPosition, DataLength));
             }
+        }
+
+
+        public int CalculateLength(Calculator calculator)
+        {
+            var length = 0;
+
+            length += calculator.CalculateASCIIString(Signature, 4);
+            length += calculator.CalculateASCIIString(Key, 4);
+            length += calculator.CalculateUInt32(DataLength);
+
+            var startLength = length;
+            // 文档中说明长度值 Length 为偶数字节数，实际上大部分 key 的长度值为 4 的倍数的偏移长度，部分 key（LMsk）为偶数偏移长度，其他 key（Txt2, Lr16, Lr32）为无偏移长度。而无论长度值为多少，数据块长度最终都会对齐到 4 的倍数。
+            var endLength = startLength + Utils.RoundUp(DataLength, 4u);
+            length += calculator.CalculateBytes(Data);
+            if (length <= endLength)
+            {
+                length += calculator.CalculatePadding((uint)(endLength - length));
+            }
+            else
+            {
+                throw new Exception(string.Format("PSD 文件（图层和蒙版信息段-图层信息-图层记录-图层混合范围）异常，数据超长:{0}，DataLength:{1}", length - startLength, DataLength));
+            }
+
+            return length;
         }
     }
     #endregion

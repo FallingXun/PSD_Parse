@@ -82,6 +82,33 @@ namespace PsdParse
                 throw new Exception(string.Format("PSD 文件（图像资源段）异常，数据超长:{0}，Length:{1}", writer.BaseStream.Position - startPosition, Length));
             }
         }
+
+        public int CalculateLength(Calculator calculator)
+        {
+            var length = 0;
+
+            length = calculator.CalculateInt32(Length);
+            var startLength = length;
+            var endLength = startLength + Length;
+            if (Length > 0)
+            {
+                for (int i = 0; i < ImageResourceBlockList.Count; i++)
+                {
+                    var item = ImageResourceBlockList[i];
+                    length += item.CalculateLength(calculator);
+                }
+            }
+            if (length <= endLength)
+            {
+                length += calculator.CalculatePadding((uint)(endLength - length));
+            }
+            else
+            {
+                throw new Exception(string.Format("PSD 文件（图像资源段）异常，数据超长:{0}，Length:{1}", length - startLength, Length));
+            }
+
+            return length;
+        }
     }
 
     #region 图像资源段（Image Resources Section）- 图像资源块（Image Resource Blocks）
@@ -209,6 +236,34 @@ namespace PsdParse
                 throw new Exception(string.Format("PSD 文件（图像资源段-图像资源块）异常，数据超长:{0}，ResourceDataSize:{1}", writer.BaseStream.Position - startPosition, ResourceDataSize));
             }
         }
+
+        public int CalculateLength(Calculator calculator)
+        {
+            var length = 0;
+            length += calculator.CalculateASCIIString(Signature, 4);
+            length += calculator.CalculateInt16((short)ImageResourceID);
+
+            // 内存对齐字节大小
+            var factor = 2u;
+
+            // Pascal 字符串要以设定值的倍数存储，这里是 2 字节，读取完后还需要跳过偏移字节
+            length += calculator.CalculatePascalString(Name, factor);
+
+            length += calculator.CalculateUInt32(ResourceDataSize);
+            var startLength = length;
+            var endLength = startLength + Utils.RoundUp(ResourceDataSize, factor);
+            length += ResourceData.CalculateLength(calculator);
+            if (length <= endLength)
+            {
+                length += calculator.CalculatePadding((uint)(endLength - length));
+            }
+            else
+            {
+                throw new Exception(string.Format("PSD 文件（图像资源段-图像资源块）异常，数据超长:{0}，ResourceDataSize:{1}", length - startLength, ResourceDataSize));
+            }
+
+            return length;
+        }
     }
 
 
@@ -246,6 +301,11 @@ namespace PsdParse
         {
             switch (m_ImageResourceID)
             {
+                case EImageResourceID.ResolutionInfo:
+                    {
+                        ResourceFormat = new ResolutionInfoResourceFormat();
+                    }
+                    break;
                 case EImageResourceID.GridAndGuidesInfo_PS4:
                     {
                         ResourceFormat = new GridAndGuidesResourceFormat();
@@ -255,6 +315,11 @@ namespace PsdParse
                 case EImageResourceID.ThumbnailResource_PS5:
                     {
                         ResourceFormat = new ThumbnailResourceFormat(m_ImageResourceID);
+                    }
+                    break;
+                case EImageResourceID.VersionInfo_PS6:
+                    {
+                        ResourceFormat = new VersionInfoResourceFormat();
                     }
                     break;
                 default:
@@ -270,6 +335,15 @@ namespace PsdParse
         public void Combine(Writer writer)
         {
             ResourceFormat.Combine(writer);
+        }
+
+        public int CalculateLength(Calculator calculator)
+        {
+            var length = 0;
+
+            length += ResourceFormat.CalculateLength(calculator);
+
+            return length;
         }
     }
     #endregion
