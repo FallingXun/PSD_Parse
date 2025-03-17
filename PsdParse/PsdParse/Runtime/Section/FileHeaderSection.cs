@@ -21,7 +21,7 @@ namespace PsdParse
             }
             set
             {
-                if (value != "8BPS")
+                if (value != Const.Signature_8BPS)
                 {
                     throw new Exception(string.Format("PSD 文件（文件头）异常，Signature:{0}", value));
                 }

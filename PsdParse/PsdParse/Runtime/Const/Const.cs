@@ -2,6 +2,7 @@
 {
     public class Const
     {
+        public const string Signature_8BPS = "8BPS";
         public const string Signature_8BIM = "8BIM";
         public const string Signature_8B64 = "8B64";
 

@@ -129,13 +129,25 @@ namespace PsdParse
     /// </summary>
     public class LayerInfo : IStreamHandler
     {
+        private uint m_Length;
         /// <summary>
         /// 图层信息长度（4 字节，PSB 为 8 字节），向上取 2 的倍数
         /// </summary>
         [ByteSize(4)]
         public uint Length
         {
-            get; set;
+            get
+            {
+                return m_Length;
+            }
+            set
+            {
+                if(value % 2 > 0)
+                {
+                    throw new Exception(string.Format("PSD 文件（图层和蒙版信息段-图层信息）异常，Length:{0}", value));
+                }
+                m_Length = value;
+            }
         }
 
         /// <summary>
@@ -168,6 +180,8 @@ namespace PsdParse
         public void Parse(Reader reader)
         {
             Length = reader.ReadUInt32();
+            var startPosition = reader.BaseStream.Position;
+            var endPosition = startPosition + Length;
             if (Length > 0)
             {
                 LayerCount = reader.ReadInt16();
@@ -189,11 +203,21 @@ namespace PsdParse
                     ImageDataRecordsList.Add(item);
                 }
             }
+            if (reader.BaseStream.Position <= endPosition)
+            {
+                reader.ReadPadding((uint)(endPosition - reader.BaseStream.Position));
+            }
+            else
+            {
+                throw new Exception(string.Format("PSD 文件（图层和蒙版信息段-图层信息）异常，数据超长:{0}，Length:{1}", reader.BaseStream.Position - startPosition, Length));
+            }
         }
 
         public void Combine(Writer writer)
         {
             writer.WriteUInt32(Length);
+            var startPosition = writer.BaseStream.Position;
+            var endPosition = startPosition + Length;
             if (Length > 0)
             {
                 writer.WriteInt16(LayerCount);
@@ -210,6 +234,14 @@ namespace PsdParse
                     item.Combine(writer);
                 }
             }
+            if (writer.BaseStream.Position <= endPosition)
+            {
+                writer.WritePadding((uint)(endPosition - writer.BaseStream.Position));
+            }
+            else
+            {
+                throw new Exception(string.Format("PSD 文件（图层和蒙版信息段-图层信息）异常，数据超长:{0}，Length:{1}", writer.BaseStream.Position - startPosition, Length));
+            }
         }
 
         public int CalculateLength(Calculator calculator)
@@ -217,19 +249,31 @@ namespace PsdParse
             var length = 0;
 
             length += calculator.CalculateUInt32(Length);
-
-            length += calculator.CalculateInt16(LayerCount);
-            var realLayerCount = Math.Abs(LayerCount);
-            for (int i = 0; i < realLayerCount; i++)
+            var startLength = length;
+            var endLength = startLength + Length;
+            if (Length > 0)
             {
-                var item = LayerRecordsList[i];
-                length += item.CalculateLength(calculator);
+                length += calculator.CalculateInt16(LayerCount);
+                var realLayerCount = Math.Abs(LayerCount);
+                for (int i = 0; i < realLayerCount; i++)
+                {
+                    var item = LayerRecordsList[i];
+                    length += item.CalculateLength(calculator);
+                }
+
+                for (int i = 0; i < realLayerCount; i++)
+                {
+                    var item = ImageDataRecordsList[i];
+                    length += item.CalculateLength(calculator);
+                }
             }
-
-            for (int i = 0; i < realLayerCount; i++)
+            if (length <= endLength)
             {
-                var item = ImageDataRecordsList[i];
-                length += item.CalculateLength(calculator);
+                calculator.CalculatePadding((uint)(endLength - length));
+            }
+            else
+            {
+                throw new Exception(string.Format("PSD 文件（图层和蒙版信息段-图层信息）异常，数据超长:{0}，Length:{1}", length - startLength, Length));
             }
 
             return length;
@@ -1287,13 +1331,16 @@ namespace PsdParse
             var length = 0;
 
             length += calculator.CalculateUInt32(Length);
-            var startLength = length;
-            var endLength = startLength + Length;
-            length += calculator.CalculateUInt16(OverlayColorSpace);
-            length += calculator.CalculateUInt64(ColorComponents);
-            length += calculator.CalculateUInt16(Opacity);
-            length += calculator.CalculateByte(Kind);
-            length += calculator.CalculateBytes(Filler);
+            if (Length > 0)
+            {
+                var startLength = length;
+                var endLength = startLength + Length;
+                length += calculator.CalculateUInt16(OverlayColorSpace);
+                length += calculator.CalculateUInt64(ColorComponents);
+                length += calculator.CalculateUInt16(Opacity);
+                length += calculator.CalculateByte(Kind);
+                length += calculator.CalculateBytes(Filler);
+            }
             return length;
         }
     }
