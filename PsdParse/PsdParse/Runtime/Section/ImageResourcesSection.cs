@@ -273,6 +273,14 @@ namespace PsdParse
     public class ResourceData : IStreamHandler
     {
         /// <summary>
+        /// 格式数据
+        /// </summary>
+        public IStreamHandler ResourceFormat
+        {
+            get; set;
+        }
+
+        /// <summary>
         /// 图像资源ID
         /// </summary>
         private EImageResourceID m_ImageResourceID;
@@ -281,14 +289,6 @@ namespace PsdParse
         /// </summary>
         private uint m_DataSize;
 
-        /// <summary>
-        /// 格式数据
-        /// </summary>
-        [ByteSize()]
-        public IStreamHandler ResourceFormat
-        {
-            get; set;
-        }
 
         public ResourceData(EImageResourceID imageResourceID, uint dataSize)
         {

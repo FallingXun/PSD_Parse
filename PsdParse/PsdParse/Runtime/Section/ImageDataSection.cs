@@ -13,7 +13,6 @@ namespace PsdParse
         /// <summary>
         /// 压缩格式（2 字节）
         /// </summary>
-        [ByteSize(2)]
         public ECompression Compression
         {
             get
@@ -33,7 +32,6 @@ namespace PsdParse
         /// <summary>
         /// 所有通道图像的每行数据长度的列表
         /// </summary>
-        [ByteSize()]
         public List<ushort[]> ChannelLineLengthList
         {
             get; set;

@@ -27,90 +27,80 @@ namespace PsdParse
             get; private set;
         }
 
-
-        #region PSD 文件读取
+        private string m_Path;
+        private Encoding m_Encoding;
 
         public PsdFile(string path)
         {
-            using (FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read))
-            {
-                Read(stream, Encoding.GetEncoding("GB2312"));
-            }
+            m_Path = path;
+            m_Encoding = Encoding.GetEncoding("GB2312");
         }
 
         public PsdFile(string path, Encoding encoding)
         {
-            using (FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read))
-            {
-                Read(stream, encoding);
-            }
+            m_Path = path;
+            m_Encoding = encoding;
         }
 
-        private void Read(Stream stream, Encoding encoding)
-        {
-            using (var reader = new Reader(stream, encoding))
-            {
-                FileHeader = new FileHeaderSection();
-                FileHeader.Parse(reader);
 
-                ColorModeData = new ColorModeDataSection();
-                ColorModeData.Parse(reader);
-
-                ImageResources = new ImageResourcesSection();
-                ImageResources.Parse(reader);
-
-                LayerAndMaskInformation = new LayerAndMaskInformationSection();
-                LayerAndMaskInformation.Parse(reader);
-
-                ImageData = new ImageDataSection(FileHeader.ChannelCount, FileHeader.Width, FileHeader.Height, FileHeader.Depth, FileHeader.ColorMode);
-                ImageData.Parse(reader);
-            }
-        }
-
-        #endregion
-
-        #region PSD 文件写入
-
-        public PsdFile(FileHeaderSection fileHeader, ColorModeDataSection colorModeData, ImageResourcesSection imageResources, LayerAndMaskInformationSection layerAndMaskInformation, ImageDataSection imageData, string path)
+        public PsdFile(string path, FileHeaderSection fileHeader, ColorModeDataSection colorModeData, ImageResourcesSection imageResources, LayerAndMaskInformationSection layerAndMaskInformation, ImageDataSection imageData) : this(path)
         {
             FileHeader = fileHeader;
             ColorModeData = colorModeData;
             ImageResources = imageResources;
             LayerAndMaskInformation = layerAndMaskInformation;
             ImageData = imageData;
-            using (FileStream stream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write))
-            {
-                Write(stream, Encoding.GetEncoding("GB2312"));
-            }
         }
 
-        public PsdFile(FileHeaderSection fileHeader, ColorModeDataSection colorModeData, ImageResourcesSection imageResources, LayerAndMaskInformationSection layerAndMaskInformation, ImageDataSection imageData, string path, Encoding encoding)
+        public PsdFile(string path, Encoding encoding, FileHeaderSection fileHeader, ColorModeDataSection colorModeData, ImageResourcesSection imageResources, LayerAndMaskInformationSection layerAndMaskInformation, ImageDataSection imageData) : this(path, encoding)
         {
             FileHeader = fileHeader;
             ColorModeData = colorModeData;
             ImageResources = imageResources;
             LayerAndMaskInformation = layerAndMaskInformation;
             ImageData = imageData;
-            using (FileStream stream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write))
-            {
-                Write(stream, encoding);
-            }
         }
 
 
-        private void Write(Stream stream, Encoding encoding)
+        public void Read()
         {
-            using (var writer = new Writer(stream, encoding))
+            using (FileStream stream = new FileStream(m_Path, FileMode.Open, FileAccess.Read))
             {
-                FileHeader.Combine(writer);
-                ColorModeData.Combine(writer);
-                ImageResources.Combine(writer);
-                LayerAndMaskInformation.Combine(writer);
-                ImageData.Combine(writer);
+                using (var reader = new Reader(stream, m_Encoding))
+                {
+                    FileHeader = new FileHeaderSection();
+                    FileHeader.Parse(reader);
+
+                    ColorModeData = new ColorModeDataSection();
+                    ColorModeData.Parse(reader);
+
+                    ImageResources = new ImageResourcesSection();
+                    ImageResources.Parse(reader);
+
+                    LayerAndMaskInformation = new LayerAndMaskInformationSection();
+                    LayerAndMaskInformation.Parse(reader);
+
+                    ImageData = new ImageDataSection(FileHeader.ChannelCount, FileHeader.Width, FileHeader.Height, FileHeader.Depth, FileHeader.ColorMode);
+                    ImageData.Parse(reader);
+                }
             }
         }
 
-        #endregion
+
+        public void Write()
+        {
+            using (FileStream stream = new FileStream(m_Path, FileMode.OpenOrCreate, FileAccess.Write))
+            {
+                using (var writer = new Writer(stream, m_Encoding))
+                {
+                    FileHeader.Combine(writer);
+                    ColorModeData.Combine(writer);
+                    ImageResources.Combine(writer);
+                    LayerAndMaskInformation.Combine(writer);
+                    ImageData.Combine(writer);
+                }
+            }
+        }
 
     }
 }

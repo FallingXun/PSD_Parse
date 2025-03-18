@@ -133,7 +133,6 @@ namespace PsdParse
         /// <summary>
         /// 图层信息长度（4 字节，PSB 为 8 字节），向上取 2 的倍数
         /// </summary>
-        [ByteSize(4)]
         public uint Length
         {
             get
@@ -153,7 +152,6 @@ namespace PsdParse
         /// <summary>
         /// 图层数（2 字节），如果是负数，则其绝对值是实际层数，第一个 alpha 通道包含合并结果的透明度数据
         /// </summary>
-        [ByteSize(2)]
         public short LayerCount
         {
             get; set;
@@ -162,7 +160,6 @@ namespace PsdParse
         /// <summary>
         /// 图层记录列表
         /// </summary>
-        [ByteSize()]
         public List<LayerRecords> LayerRecordsList
         {
             get; set;
@@ -171,7 +168,6 @@ namespace PsdParse
         /// <summary>
         /// 图像数据记录列表
         /// </summary>
-        [ByteSize()]
         public List<ImageDataRecords> ImageDataRecordsList
         {
             get; set;
@@ -269,7 +265,7 @@ namespace PsdParse
             }
             if (length <= endLength)
             {
-                calculator.CalculatePadding((uint)(endLength - length));
+                length += calculator.CalculatePadding((uint)(endLength - length));
             }
             else
             {
@@ -573,7 +569,6 @@ namespace PsdParse
         /// <summary>
         /// 通道 id（2 字节）
         /// </summary>
-        [ByteSize(2)]
         public EChannelID ID
         {
             get
@@ -593,7 +588,6 @@ namespace PsdParse
         /// <summary>
         /// 图像数据记录 <see cref="ImageDataRecords"/> 的长度（4 字节），<see cref="ImageDataRecords.ImageData"/> 的长度需要减去 <see cref="ImageDataRecords.Compression"/> 的长度（即 2 字节）
         /// </summary>
-        [ByteSize(4)]
         public uint Length
         {
             get; set;
@@ -894,16 +888,16 @@ namespace PsdParse
                         length += calculator.CalculateDouble(VectorMaskFeather);
                     }
                 }
-            }
-            if (Size == 20)
-            {
-                length += calculator.CalculateUInt16(Padding);
-            }
-            else
-            {
-                length += calculator.CalculateByte(RealFlags);
-                length += calculator.CalculateByte((byte)RealUserMaskBackground);
-                length += calculator.CalculateRectangle(RealEnclosingLayerMaskRectangle);
+                if (Size == 20)
+                {
+                    length += calculator.CalculateUInt16(Padding);
+                }
+                else
+                {
+                    length += calculator.CalculateByte(RealFlags);
+                    length += calculator.CalculateByte((byte)RealUserMaskBackground);
+                    length += calculator.CalculateRectangle(RealEnclosingLayerMaskRectangle);
+                }
             }
             if (length <= endLength)
             {
@@ -1050,7 +1044,6 @@ namespace PsdParse
         /// 所有通道的图像数据列表
         ///     RLE压缩时，每个通道的字节数组，前面部分为每一行的数据长度，行数为 LayerBottom - LayerTop ，每个数据长度为 2 字节（PSB 为 4 字节），所有行的长度后才是图像数据
         /// </summary>
-        [ByteSize()]
         public List<ChannelImageData> ChannelImageDataList
         {
             get; set;
@@ -1120,7 +1113,6 @@ namespace PsdParse
         /// <summary>
         /// 压缩格式（2 字节）
         /// </summary>
-        [ByteSize(2)]
         public ECompression Compression
         {
             get
@@ -1238,7 +1230,6 @@ namespace PsdParse
         /// <summary>
         /// 全局图层蒙版信息长度（4 字节）
         /// </summary>
-        [ByteSize(4)]
         public uint Length
         {
             get; set;
@@ -1247,7 +1238,6 @@ namespace PsdParse
         /// <summary>
         /// 叠加颜色空间（2 字节）
         /// </summary>
-        [ByteSize(2)]
         public ushort OverlayColorSpace
         {
             get; set;
@@ -1256,7 +1246,6 @@ namespace PsdParse
         /// <summary>
         /// 颜色组件数组（8 字节），4 * 2 byte
         /// </summary>
-        [ByteSize(8)]
         public ulong ColorComponents
         {
             get; set;

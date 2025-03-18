@@ -1,4 +1,8 @@
-﻿namespace PsdParse
+﻿
+using System.Collections.Generic;
+using System.Text;
+
+namespace PsdParse
 {
     public class Utils
     {

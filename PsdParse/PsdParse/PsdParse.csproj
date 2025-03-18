@@ -41,7 +41,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Runtime\Attribute\ByteSizeAttribute.cs" />
     <Compile Include="Runtime\ChannelCompressImageData\ChannelDefaultImageData.cs" />
     <Compile Include="Runtime\Const\BlendModeKeyConst.cs" />
     <Compile Include="Runtime\Const\Const.cs" />
